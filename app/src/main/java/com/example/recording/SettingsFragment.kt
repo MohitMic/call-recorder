@@ -18,7 +18,6 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
     private lateinit var editUrl: EditText
     private lateinit var editKey: EditText
     private lateinit var btnSave: Button
-    private lateinit var switchWifi: Switch
     private lateinit var switchDelete: Switch
     private lateinit var btnScan: Button
     private lateinit var textScanStatus: TextView
@@ -29,7 +28,6 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         editUrl        = view.findViewById(R.id.editSupabaseUrl)
         editKey        = view.findViewById(R.id.editSupabaseKey)
         btnSave        = view.findViewById(R.id.btnSaveServer)
-        switchWifi     = view.findViewById(R.id.switchWifiOnly)
         switchDelete   = view.findViewById(R.id.switchDeleteAfterUpload)
         btnScan        = view.findViewById(R.id.btnCompatScan)
         textScanStatus = view.findViewById(R.id.textScanStatus)
@@ -38,7 +36,6 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         val ctx = requireContext()
         editUrl.setText(AppPrefs.getSupabaseUrl(ctx))
         editKey.setText(AppPrefs.getSupabaseKey(ctx))
-        switchWifi.isChecked   = AppPrefs.isWifiOnly(ctx)
         switchDelete.isChecked = AppPrefs.isDeleteAfterUpload(ctx)
 
         btnSave.setOnClickListener {
@@ -46,10 +43,6 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
             AppPrefs.setSupabaseKey(ctx, editKey.text?.toString() ?: "")
             btnSave.text = "Saved ✓"
             btnSave.postDelayed({ btnSave.text = "Save" }, 2000)
-        }
-
-        switchWifi.setOnCheckedChangeListener { _, checked ->
-            AppPrefs.setWifiOnly(ctx, checked)
         }
 
         switchDelete.setOnCheckedChangeListener { _, checked ->

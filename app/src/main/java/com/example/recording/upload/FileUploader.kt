@@ -70,7 +70,14 @@ class FileUploader(
 
         val storagePath = file.name   // e.g. "INCOMING__12345_20240101_123456.mp4"
 
-        return uploadToStorage(file, storagePath) && insertMetadata(payload, storagePath)
+        // Storage upload is the critical step — marker written on success.
+        // Metadata insert is best-effort; failure does not block the upload status.
+        val stored = uploadToStorage(file, storagePath)
+        if (stored) {
+            runCatching { insertMetadata(payload, storagePath) }
+                .onFailure { Log.w(TAG, "Metadata insert skipped: ${it.message}") }
+        }
+        return stored
     }
 
     // PUT /storage/v1/object/{bucket}/{storagePath}
