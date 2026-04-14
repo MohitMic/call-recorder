@@ -22,7 +22,7 @@ object AppPrefs {
         prefs(context).edit().putString(KEY_SUPABASE_KEY, key.trim()).apply()
 
     fun isWifiOnly(context: Context): Boolean =
-        prefs(context).getBoolean(KEY_WIFI_ONLY, true)
+        prefs(context).getBoolean(KEY_WIFI_ONLY, false)
 
     fun setWifiOnly(context: Context, value: Boolean) =
         prefs(context).edit().putBoolean(KEY_WIFI_ONLY, value).apply()
