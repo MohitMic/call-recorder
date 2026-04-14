@@ -33,8 +33,12 @@ class UploadWorker(
         val success = runCatching { uploader.upload(payload) }.getOrDefault(false)
         if (!success) return Result.retry()
 
+        // Write a marker file so the UI can show "Uploaded" status
+        val src = File(payload.filePath)
+        File(src.parentFile, "${src.nameWithoutExtension}.uploaded").createNewFile()
+
         if (deleteAfterUpload) {
-            File(payload.filePath).delete()
+            src.delete()
         }
         return Result.success()
     }

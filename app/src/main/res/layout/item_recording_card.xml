@@ -78,6 +78,22 @@
             android:layout_marginTop="2dp"
             android:textSize="12sp" />
 
+        <TextView
+            android:id="@+id/textDevice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textSize="11sp"
+            android:textColor="#757575" />
+
+        <TextView
+            android:id="@+id/textUploadStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

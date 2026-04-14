@@ -32,11 +32,6 @@ class RecordingsFragment : Fragment(R.layout.fragment_recordings) {
                 val intent = Intent(requireContext(), RecordingsPlaybackActivity::class.java)
                 intent.putExtra(RecordingsPlaybackActivity.EXTRA_FILE_PATH, item.file.absolutePath)
                 startActivity(intent)
-            },
-            onDebugClick = { item ->
-                val intent = Intent(requireContext(), RecordingsDebugActivity::class.java)
-                intent.putExtra(RecordingsDebugActivity.EXTRA_FILE_PATH, item.file.absolutePath)
-                startActivity(intent)
             }
         )
 
