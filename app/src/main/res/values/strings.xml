@@ -2,35 +2,29 @@
 <resources>
     <string name="app_name">Call Recorder</string>
 
-    <!-- Bottom nav labels -->
     <string name="nav_dashboard">Dashboard</string>
     <string name="nav_recordings">Recordings</string>
     <string name="nav_settings">Settings</string>
 
-    <!-- Service status -->
     <string name="service_running">Call recorder service is active</string>
     <string name="service_stopped">Call recorder service is stopped</string>
     <string name="service_card_title">Recording Service</string>
-    <string name="service_card_subtitle_on">Monitoring calls — ready to record</string>
+    <string name="service_card_subtitle_on">Monitoring calls - ready to record</string>
     <string name="service_card_subtitle_off">Tap the switch to start monitoring</string>
 
-    <!-- Notification -->
     <string name="notification_title">Call Recorder Active</string>
     <string name="notification_text">Monitoring calls and recording when active</string>
     <string name="notification_channel_name">Call Recorder Service</string>
     <string name="stop_service">Stop</string>
 
-    <!-- Accessibility -->
     <string name="accessibility_service_name">Call Recorder Accessibility</string>
 
-    <!-- Live call card -->
     <string name="live_card_title">Live Call</string>
-    <string name="live_card_recording">● RECORDING</string>
-    <string name="live_card_idle">Waiting for call…</string>
-    <string name="live_card_offhook_yes">Telephony OFFHOOK: YES ✓</string>
-    <string name="live_card_offhook_no">Telephony OFFHOOK: NO ⚠</string>
+    <string name="live_card_recording">RECORDING</string>
+    <string name="live_card_idle">Waiting for call...</string>
+    <string name="live_card_offhook_yes">Telephony OFFHOOK: YES</string>
+    <string name="live_card_offhook_no">Telephony OFFHOOK: NO</string>
 
-    <!-- Setup checklist -->
     <string name="checklist_title">Setup Checklist</string>
     <string name="perm_mic">Microphone</string>
     <string name="perm_phone_state">Phone State</string>
@@ -43,24 +37,21 @@
     <string name="btn_enable">Enable</string>
     <string name="btn_request">Request</string>
 
-    <!-- Recordings screen -->
     <string name="recordings_title">Recordings</string>
     <string name="recordings_empty">No recordings yet.\nStart the service and place a call.</string>
-    <string name="recordings_loading">Loading…</string>
+    <string name="recordings_loading">Loading...</string>
     <string name="recording_debug_title">Recording Debug</string>
     <string name="open_recording_debug">Debug</string>
     <string name="open_play_recordings">Play</string>
 
-    <!-- Recording card -->
     <string name="health_good">GOOD</string>
     <string name="health_partial">PARTIAL</string>
     <string name="health_risk">SILENT RISK</string>
     <string name="health_unknown">UNKNOWN</string>
-    <string name="direction_incoming">↓ Incoming</string>
-    <string name="direction_outgoing">↑ Outgoing</string>
-    <string name="direction_unknown">\? Unknown</string>
+    <string name="direction_incoming">Incoming</string>
+    <string name="direction_outgoing">Outgoing</string>
+    <string name="direction_unknown">Unknown</string>
 
-    <!-- Playback -->
     <string name="playback_title">Play Recordings</string>
     <string name="playback_none">Tap a recording to play.</string>
     <string name="playback_loading">Loading: %1$s</string>
@@ -72,14 +63,12 @@
     <string name="playback_pause">Pause</string>
     <string name="playback_stop">Stop</string>
 
-    <!-- Debug -->
     <string name="no_recordings_found">No recordings in CallRecordings yet.</string>
     <string name="no_debug_sidecar">No debug file for this recording yet.\nExpected: %1$s</string>
     <string name="debug_parse_error">Could not read debug JSON: %1$s</string>
     <string name="live_status_heading">Live status (during call)</string>
     <string name="live_status_placeholder">Start the service, then open this screen while on a call.</string>
 
-    <!-- Settings -->
     <string name="settings_title">Settings</string>
     <string name="settings_server_title">Server Configuration</string>
     <string name="settings_server_subtitle">Supabase project for storing recordings</string>
@@ -90,18 +79,16 @@
     <string name="settings_delete_after">Delete local file after upload</string>
     <string name="settings_diagnostics_title">Device Diagnostics</string>
     <string name="btn_compat_scan">Run Compatibility Scan</string>
-    <string name="scan_running">Scanning audio sources…</string>
+    <string name="scan_running">Scanning audio sources...</string>
     <string name="scan_done_title">Compatibility Results</string>
     <string name="scan_works">WORKS</string>
     <string name="scan_silent">ACCESSIBLE (silent)</string>
     <string name="scan_blocked">BLOCKED</string>
     <string name="scan_failed">FAILED</string>
 
-    <!-- Grant audio capture -->
     <string name="grant_audio_capture">Grant Audio Capture (Dual-Channel)</string>
-    <string name="audio_capture_granted">✓ Audio Capture Granted</string>
+    <string name="audio_capture_granted">Audio Capture Granted</string>
 
-    <!-- Legacy strings kept for old activities -->
     <string name="request_permissions">Request Permissions</string>
     <string name="open_accessibility_settings">Enable Accessibility Service</string>
     <string name="start_recording_service">Start Recording Service</string>
