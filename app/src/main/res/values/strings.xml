@@ -58,7 +58,7 @@
     <string name="health_unknown">UNKNOWN</string>
     <string name="direction_incoming">↓ Incoming</string>
     <string name="direction_outgoing">↑ Outgoing</string>
-    <string name="direction_unknown">? Unknown</string>
+    <string name="direction_unknown">\? Unknown</string>
 
     <!-- Playback -->
     <string name="playback_title">Play Recordings</string>
