@@ -25,7 +25,25 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build debug APK
+        id: build
         run: ./gradlew assembleDebug --no-daemon
+        continue-on-error: true
+
+      - name: Dump merged values around error line (on failure)
+        if: steps.build.outcome == 'failure'
+        run: |
+          FILE=$(find app/build -name "values.xml" -path "*/merged*" 2>/dev/null | head -1)
+          if [ -n "$FILE" ]; then
+            echo "=== $FILE ==="
+            sed -n '1910,1950p' "$FILE"
+          else
+            echo "Merged values file not found"
+            find app/build -name "*.xml" 2>/dev/null | head -20
+          fi
+
+      - name: Fail if build failed
+        if: steps.build.outcome == 'failure'
+        run: exit 1
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
