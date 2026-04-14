@@ -32,14 +32,24 @@ jobs:
       - name: Dump merged values around error line (on failure)
         if: steps.build.outcome == 'failure'
         run: |
-          FILE=$(find app/build -name "values.xml" -path "*/merged*" 2>/dev/null | head -1)
-          if [ -n "$FILE" ]; then
-            echo "=== $FILE ==="
+          echo "=== All values.xml files in build dir ==="
+          find app/build -name "values.xml" 2>/dev/null | while read f; do
+            lines=$(wc -l < "$f")
+            echo "$lines lines: $f"
+          done
+          echo ""
+          echo "=== Largest values.xml ==="
+          FILE=$(find app/build -name "values.xml" 2>/dev/null | xargs wc -l 2>/dev/null | sort -rn | awk 'NR==1{print $2}')
+          if [ -n "$FILE" ] && [ "$FILE" != "total" ]; then
+            echo "File: $FILE"
+            echo "--- Lines 1910-1950 ---"
             sed -n '1910,1950p' "$FILE"
           else
-            echo "Merged values file not found"
-            find app/build -name "*.xml" 2>/dev/null | head -20
+            echo "No large values.xml found"
           fi
+          echo ""
+          echo "=== AAPT2 intermediate dir ==="
+          find app/build/intermediates -type d -name "debug" 2>/dev/null | head -10
 
       - name: Fail if build failed
         if: steps.build.outcome == 'failure'
