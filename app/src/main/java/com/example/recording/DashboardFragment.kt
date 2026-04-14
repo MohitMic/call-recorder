@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.provider.Settings
 import android.view.View
 import android.widget.Button
+import android.widget.Switch
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
@@ -21,7 +22,7 @@ import com.example.recording.capture.MediaProjectionStore
 import com.example.recording.service.CallRecorderService
 import com.example.recording.service.ServiceController
 import com.example.recording.ui.LiveRecorderStatus
-import com.google.android.material.switchmaterial.SwitchMaterial
+
 import kotlinx.coroutines.launch
 import java.util.Locale
 import java.util.concurrent.TimeUnit
@@ -29,7 +30,7 @@ import java.util.concurrent.TimeUnit
 class DashboardFragment : Fragment(R.layout.fragment_dashboard) {
 
     // Service card
-    private lateinit var switchService: SwitchMaterial
+    private lateinit var switchService: Switch
     private lateinit var textServiceSubtitle: TextView
 
     // Live call card

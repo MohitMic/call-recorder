@@ -33,8 +33,8 @@ jobs:
         if: steps.build.outcome == 'failure'
         run: |
           FILE="app/build/intermediates/incremental/debug/mergeDebugResources/merged.dir/values/values.xml"
-          echo "=== Lines 1920-1940 of merged values ==="
-          sed -n '1920,1940p' "$FILE"
+          echo "=== Lines 1900-1970 of merged values ==="
+          sed -n '1900,1970p' "$FILE"
 
       - name: Fail if build failed
         if: steps.build.outcome == 'failure'

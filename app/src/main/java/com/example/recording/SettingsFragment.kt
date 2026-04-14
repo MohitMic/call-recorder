@@ -3,24 +3,24 @@ package com.example.recording
 import android.app.AlertDialog
 import android.os.Bundle
 import android.view.View
+import android.widget.Button
+import android.widget.EditText
+import android.widget.Switch
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-import com.google.android.material.button.MaterialButton
-import com.google.android.material.switchmaterial.SwitchMaterial
-import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class SettingsFragment : Fragment(R.layout.fragment_settings) {
 
-    private lateinit var editUrl: TextInputEditText
-    private lateinit var editKey: TextInputEditText
-    private lateinit var btnSave: MaterialButton
-    private lateinit var switchWifi: SwitchMaterial
-    private lateinit var switchDelete: SwitchMaterial
-    private lateinit var btnScan: MaterialButton
+    private lateinit var editUrl: EditText
+    private lateinit var editKey: EditText
+    private lateinit var btnSave: Button
+    private lateinit var switchWifi: Switch
+    private lateinit var switchDelete: Switch
+    private lateinit var btnScan: Button
     private lateinit var textScanStatus: TextView
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
