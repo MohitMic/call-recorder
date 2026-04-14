@@ -1,0 +1,22 @@
+CONTEXT: Android call recorder app using ForegroundService + TelephonyCallback + AccessibilityService + MediaRecorder (VOICE_COMMUNICATION → fallbacks). Saves MP4 under app-specific storage; optional WorkManager upload.
+
+OBSERVED PROBLEM: Recordings are created (file size non-trivial) but playback has no audible voice / silence.
+
+EVIDENCE FROM DEVICE DEBUG JSON (Nothing phone, Android API 36):
+- activeCallTriggerSummary often shows Accessibility (InCallActivity) moving state to ACTIVE, not Telephony CALL_STATE_OFFHOOK before MediaRecorder start.
+- Timeline sometimes shows “Foreground started; registering telephony” AFTER “Recorder OK”, meaning telephony listeners were registered late relative to recording start (user tapped Start multiple times; intent ordering).
+- MediaRecorder reports VOICE_COMMUNICATION OK (sourceAttempts OK) — technical success does not mean OS exposes mixed call audio to third-party apps.
+
+LIKELY ROOT CAUSES (not mutually exclusive):
+1) OEM/Android policy: Many devices do not expose true uplink/downlink call audio to normal apps. MediaRecorder can “start” while the routed audio is empty or mic-only.
+2) Telephony vs Accessibility ordering: If recording starts from Accessibility before Telephony OFFHOOK is observed, alignment with real call audio routing is unreliable.
+3) Late telephony registration: If TelephonyCallback registers after the call is already off-hook, RINGING/OFFHOOK may never be observed for that session.
+4) Speakerphone: Usually does not “unlock” blocked call-tap; may only change room pickup if MIC path is used.
+
+NOT DEVICE-SPECIFIC GUARANTEE: Behavior varies by OEM (Nothing, Oppo/ColorOS, OnePlus/OxygenOS, Samsung, Pixel). Newer Android tends to tighten access. Other brands are not guaranteed to work better without per-device testing.
+
+WHAT “HEALTHY” LOOKS LIKE IN LOGS/UI:
+- Telephony CALL_STATE_OFFHOOK observed before or at the moment recording starts (hadTelephonyOffhookBeforeStart = true in app UI).
+- If OFFHOOK never appears before capture but recording runs → high risk of silence regardless of file size.
+
+QUESTION FOR MODELS: Given Android 10+ privacy and OEM-specific audio routing, what are feasible approaches for third-party apps to capture both sides of a cellular call without system/privileged APIs, and how to validate (A/B audio sources, Telecom/ConnectionService, etc.)?

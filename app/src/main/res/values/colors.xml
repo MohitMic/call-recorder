@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand palette -->
+    <color name="colorPrimary">#1A237E</color>
+    <color name="colorPrimaryDark">#0D1455</color>
+    <color name="colorPrimaryLight">#3F51B5</color>
+    <color name="colorOnPrimary">#FFFFFF</color>
+    <color name="colorSecondary">#00695C</color>
+    <color name="colorOnSecondary">#FFFFFF</color>
+
+    <!-- Surfaces -->
+    <color name="colorBackground">#EEF0FF</color>
+    <color name="colorSurface">#FFFFFF</color>
+    <color name="colorOnSurface">#1C1B1F</color>
+    <color name="colorOnSurfaceSecondary">#5F6368</color>
+    <color name="colorDivider">#E0E0E0</color>
+
+    <!-- Error -->
+    <color name="colorError">#C62828</color>
+
+    <!-- Health status colours -->
+    <color name="health_good">#2E7D32</color>
+    <color name="health_good_bg">#E8F5E9</color>
+    <color name="health_partial">#E65100</color>
+    <color name="health_partial_bg">#FFF3E0</color>
+    <color name="health_risk">#B71C1C</color>
+    <color name="health_risk_bg">#FFEBEE</color>
+    <color name="health_unknown">#546E7A</color>
+    <color name="health_unknown_bg">#ECEFF1</color>
+
+    <!-- Live banner (kept for CallRecorderService compat) -->
+    <color name="live_banner_ok">#E8F5E9</color>
+    <color name="live_banner_risk">#FFEBEE</color>
+    <color name="live_banner_neutral">#E3F2FD</color>
+
+    <!-- Source badge -->
+    <color name="badge_dual">#1565C0</color>
+    <color name="badge_dual_bg">#E3F2FD</color>
+    <color name="badge_voice">#6A1B9A</color>
+    <color name="badge_voice_bg">#F3E5F5</color>
+    <color name="badge_mic">#4E342E</color>
+    <color name="badge_mic_bg">#EFEBE9</color>
+
+    <!-- Permission check / cross -->
+    <color name="perm_granted">#2E7D32</color>
+    <color name="perm_denied">#C62828</color>
+    <color name="perm_warning">#F57F17</color>
+</resources>

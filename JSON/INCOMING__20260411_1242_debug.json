@@ -1,0 +1,100 @@
+{
+    "audioFileName": "INCOMING__20260411_1242.mp4",
+    "audioFilePath": "/storage/emulated/0/Android/data/com.example.recording/files/CallRecordings/INCOMING__20260411_1242.mp4",
+    "deviceManufacturer": "Nothing",
+    "deviceModel": "A142",
+    "sdkInt": 36,
+    "telephonyListenerMode": "TelephonyCallback (API 36)",
+    "direction": "INCOMING",
+    "numberLabel": "len=0",
+    "startedAtMillis": 1775891568856,
+    "stoppedAtMillis": 1775891593069,
+    "durationMillis": 24213,
+    "audioSourceUsed": "VOICE_COMMUNICATION",
+    "sourceAttempts": [
+        {
+            "source": "VOICE_COMMUNICATION",
+            "outcome": "OK"
+        }
+    ],
+    "activeCallTriggerSummary": "Accessibility: window class suggests in-call UI (com.android.dialer.incall.activity.ui.InCallActivity pkg=com.google.android.dialer)",
+    "timeline": [
+        {
+            "timeMillis": 1775891557503,
+            "message": "Foreground started; registering telephony (TelephonyCallback (API 36))"
+        },
+        {
+            "timeMillis": 1775891557516,
+            "message": "ignored: already in IDLE"
+        },
+        {
+            "timeMillis": 1775891559013,
+            "message": "Foreground started; registering telephony (TelephonyCallback (API 36))"
+        },
+        {
+            "timeMillis": 1775891559027,
+            "message": "ignored: already in IDLE"
+        },
+        {
+            "timeMillis": 1775891560003,
+            "message": "Foreground started; registering telephony (TelephonyCallback (API 36))"
+        },
+        {
+            "timeMillis": 1775891560015,
+            "message": "ignored: already in IDLE"
+        },
+        {
+            "timeMillis": 1775891567630,
+            "message": "Intent: ACCESSIBILITY START — Accessibility: window class suggests in-call UI (com.android.dialer.incall.activity.ui.InCallActivity pkg=com.google.android.dialer)"
+        },
+        {
+            "timeMillis": 1775891567630,
+            "message": "State IDLE → ACTIVE | Accessibility: window class suggests in-call UI (com.android.dialer.incall.activity.ui.InCallActivity pkg=com.google.android.dialer)"
+        },
+        {
+            "timeMillis": 1775891567630,
+            "message": "startCapture: direction=INCOMING number=len=0 (outgoingHint=UNKNOWN)"
+        },
+        {
+            "timeMillis": 1775891568793,
+            "message": "Recorder OK: source=VOICE_COMMUNICATION path=INCOMING__20260411_1242.mp4"
+        },
+        {
+            "timeMillis": 1775891569033,
+            "message": "ignored: already in ACTIVE"
+        },
+        {
+            "timeMillis": 1775891569033,
+            "message": "ignored(debounce): duplicate transition to ACTIVE"
+        },
+        {
+            "timeMillis": 1775891569033,
+            "message": "ignored(debounce): duplicate transition to ACTIVE"
+        },
+        {
+            "timeMillis": 1775891569082,
+            "message": "Intent: ACCESSIBILITY START — Accessibility: window class suggests in-call UI (com.android.dialer.incall.activity.ui.InCallActivity pkg=com.google.android.dialer)"
+        },
+        {
+            "timeMillis": 1775891592602,
+            "message": "Intent: ACCESSIBILITY START — Accessibility: window class suggests in-call UI (com.android.dialer.incall.activity.ui.InCallActivity pkg=com.google.android.dialer)"
+        },
+        {
+            "timeMillis": 1775891592829,
+            "message": "Intent: ACCESSIBILITY START — Accessibility: window class suggests in-call UI (com.android.dialer.incall.activity.ui.InCallActivity pkg=com.google.android.dialer)"
+        },
+        {
+            "timeMillis": 1775891593069,
+            "message": "State ACTIVE → IDLE | Telephony: CALL_STATE_IDLE"
+        },
+        {
+            "timeMillis": 1775891593326,
+            "message": "MediaRecorder stopped; file=INCOMING__20260411_1242.mp4 sizeBytes=297264"
+        }
+    ],
+    "outputFileSizeBytes": 297264,
+    "hints": [
+        "Compare activeCallTriggerSummary vs timeline: telephony OFFHOOK should appear before record start.",
+        "If only Accessibility fired: telephony callbacks may be blocked; check OEM restrictions / default dialer."
+    ]
+}

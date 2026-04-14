@@ -1,0 +1,319 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/colorBackground"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- ── App header ────────────────────────────────────── -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingTop="8dp"
+            android:paddingBottom="16dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/app_name"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:textColor="@color/colorPrimary" />
+
+        </LinearLayout>
+
+        <!-- ── Service status card ───────────────────────────── -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardService"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardBackgroundColor="@color/colorSurface"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="3dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="20dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/service_card_title"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/colorOnSurface" />
+
+                    <TextView
+                        android:id="@+id/textServiceSubtitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="@string/service_card_subtitle_off"
+                        android:textSize="13sp"
+                        android:textColor="@color/colorOnSurfaceSecondary" />
+
+                </LinearLayout>
+
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/switchService"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ── Live call card (GONE when idle) ──────────────── -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardLiveCall"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:visibility="gone"
+            app:cardBackgroundColor="@color/colorPrimary"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <!-- Header row: dot + RECORDING label + timer -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <View
+                        android:id="@+id/dotLive"
+                        android:layout_width="10dp"
+                        android:layout_height="10dp"
+                        android:background="#FFEB3B"
+                        android:layout_marginEnd="8dp" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/live_card_recording"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:textColor="#FFEB3B"
+                        android:letterSpacing="0.05" />
+
+                    <TextView
+                        android:id="@+id/textLiveDuration"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0:00"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:textColor="#FFFFFF"
+                        android:fontFamily="monospace" />
+
+                </LinearLayout>
+
+                <!-- Phone number -->
+                <TextView
+                    android:id="@+id/textLiveNumber"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="Unknown"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:textColor="#FFFFFF" />
+
+                <!-- Direction + source -->
+                <TextView
+                    android:id="@+id/textLiveSource"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textSize="13sp"
+                    android:textColor="#B3FFFFFF" />
+
+                <!-- Health banner -->
+                <TextView
+                    android:id="@+id/textLiveHealthBanner"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="#33FFFFFF"
+                    android:padding="10dp"
+                    android:textSize="12sp"
+                    android:textColor="#FFFFFF"
+                    android:fontFamily="monospace" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ── Setup checklist card ──────────────────────────── -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardBackgroundColor="@color/colorSurface"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="3dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    android:text="@string/checklist_title"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/colorOnSurface" />
+
+                <!-- Microphone -->
+                <LinearLayout
+                    android:id="@+id/rowMic"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    <View android:id="@+id/dotMic"
+                        android:layout_width="12dp" android:layout_height="12dp"
+                        android:background="#CCCCCC" android:layout_marginEnd="14dp"/>
+                    <TextView android:id="@+id/textMic"
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:text="@string/perm_mic"
+                        android:textSize="14sp" android:textColor="@color/colorOnSurface"/>
+                    <Button android:id="@+id/btnMic"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="wrap_content" android:layout_height="36dp"
+                        android:text="@string/btn_grant" android:textSize="12sp"
+                        android:visibility="gone" android:paddingStart="12dp" android:paddingEnd="12dp"/>
+                </LinearLayout>
+
+                <View android:layout_width="match_parent" android:layout_height="1dp"
+                    android:background="@color/colorDivider" android:layout_marginTop="4dp" android:layout_marginBottom="4dp"/>
+
+                <!-- Phone State -->
+                <LinearLayout
+                    android:id="@+id/rowPhoneState"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    <View android:id="@+id/dotPhoneState"
+                        android:layout_width="12dp" android:layout_height="12dp"
+                        android:background="#CCCCCC" android:layout_marginEnd="14dp"/>
+                    <TextView android:id="@+id/textPhoneState"
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:text="@string/perm_phone_state"
+                        android:textSize="14sp" android:textColor="@color/colorOnSurface"/>
+                    <Button android:id="@+id/btnPhoneState"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="wrap_content" android:layout_height="36dp"
+                        android:text="@string/btn_grant" android:textSize="12sp"
+                        android:visibility="gone" android:paddingStart="12dp" android:paddingEnd="12dp"/>
+                </LinearLayout>
+
+                <View android:layout_width="match_parent" android:layout_height="1dp"
+                    android:background="@color/colorDivider" android:layout_marginTop="4dp" android:layout_marginBottom="4dp"/>
+
+                <!-- Notifications (API 33+) -->
+                <LinearLayout
+                    android:id="@+id/rowNotifications"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    <View android:id="@+id/dotNotifications"
+                        android:layout_width="12dp" android:layout_height="12dp"
+                        android:background="#CCCCCC" android:layout_marginEnd="14dp"/>
+                    <TextView android:id="@+id/textNotifications"
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:text="@string/perm_notifications"
+                        android:textSize="14sp" android:textColor="@color/colorOnSurface"/>
+                    <Button android:id="@+id/btnNotifications"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="wrap_content" android:layout_height="36dp"
+                        android:text="@string/btn_grant" android:textSize="12sp"
+                        android:visibility="gone" android:paddingStart="12dp" android:paddingEnd="12dp"/>
+                </LinearLayout>
+
+                <View android:layout_width="match_parent" android:layout_height="1dp"
+                    android:background="@color/colorDivider" android:layout_marginTop="4dp" android:layout_marginBottom="4dp"/>
+
+                <!-- Accessibility -->
+                <LinearLayout
+                    android:id="@+id/rowAccessibility"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    <View android:id="@+id/dotAccessibility"
+                        android:layout_width="12dp" android:layout_height="12dp"
+                        android:background="#CCCCCC" android:layout_marginEnd="14dp"/>
+                    <TextView android:id="@+id/textAccessibility"
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:text="@string/perm_accessibility"
+                        android:textSize="14sp" android:textColor="@color/colorOnSurface"/>
+                    <Button android:id="@+id/btnAccessibility"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="wrap_content" android:layout_height="36dp"
+                        android:text="@string/btn_enable" android:textSize="12sp"
+                        android:visibility="gone" android:paddingStart="12dp" android:paddingEnd="12dp"/>
+                </LinearLayout>
+
+                <View android:layout_width="match_parent" android:layout_height="1dp"
+                    android:background="@color/colorDivider" android:layout_marginTop="4dp" android:layout_marginBottom="4dp"/>
+
+                <!-- Dual-Channel Audio Capture -->
+                <LinearLayout
+                    android:id="@+id/rowDualChannel"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    <View android:id="@+id/dotDualChannel"
+                        android:layout_width="12dp" android:layout_height="12dp"
+                        android:background="#CCCCCC" android:layout_marginEnd="14dp"/>
+                    <TextView android:id="@+id/textDualChannel"
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:text="@string/perm_dual_channel"
+                        android:textSize="14sp" android:textColor="@color/colorOnSurface"/>
+                    <Button android:id="@+id/btnDualChannel"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="wrap_content" android:layout_height="36dp"
+                        android:text="@string/btn_grant" android:textSize="12sp"
+                        android:visibility="gone" android:paddingStart="12dp" android:paddingEnd="12dp"/>
+                </LinearLayout>
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>
