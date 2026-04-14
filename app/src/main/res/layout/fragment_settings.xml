@@ -52,11 +52,27 @@
                 android:singleLine="true"
                 android:layout_marginBottom="8dp" />
 
-            <Button
-                android:id="@+id/btnSaveServer"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Save" />
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnSaveServer"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="8dp"
+                    android:text="Save" />
+
+                <Button
+                    android:id="@+id/btnTestConnection"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Test Connection" />
+
+            </LinearLayout>
 
         </LinearLayout>
 
