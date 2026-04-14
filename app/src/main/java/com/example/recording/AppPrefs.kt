@@ -36,8 +36,6 @@ object AppPrefs {
     private fun prefs(context: Context) =
         context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    companion object {
-        const val DEFAULT_SUPABASE_URL = "https://tahyfwvlnlufqkzknbcm.supabase.co"
-        const val DEFAULT_SUPABASE_KEY = "sb_publishable_VPkvLBuf_p8ltI4LH0bTuw_PHp6rLYn"
-    }
+    const val DEFAULT_SUPABASE_URL = "https://tahyfwvlnlufqkzknbcm.supabase.co"
+    const val DEFAULT_SUPABASE_KEY = "sb_publishable_VPkvLBuf_p8ltI4LH0bTuw_PHp6rLYn"
 }
