@@ -77,6 +77,10 @@
     <string name="settings_upload_title">Upload Behaviour</string>
     <string name="settings_wifi_only">Upload on Wi-Fi only</string>
     <string name="settings_delete_after">Delete local file after upload</string>
+    <string name="settings_recording_title">Recording Behaviour</string>
+    <string name="settings_force_speaker">Force speakerphone during call</string>
+    <string name="settings_force_speaker_hint">Routes both sides of the call through the loudspeaker so the mic can record them. The only way to capture remote audio without root on modern Android. Turn off if you use a BT headset.</string>
+
     <string name="settings_diagnostics_title">Device Diagnostics</string>
     <string name="btn_compat_scan">Run Compatibility Scan</string>
     <string name="scan_running">Scanning audio sources...</string>

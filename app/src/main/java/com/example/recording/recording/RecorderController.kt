@@ -44,8 +44,23 @@ class RecorderController(private val context: Context) {
     private var dualRecorder: DualChannelRecorder? = null
     private var currentPath: String? = null
 
-    fun start(direction: CallDirection, number: String): Pair<StartResult?, List<SourceAttempt>> {
+    // When speakerphone is forced on for recording, remember the prior state so we can restore it.
+    private var priorSpeakerphoneState: Boolean? = null
+    private var speakerphoneWasForced: Boolean = false
+
+    fun start(
+        direction: CallDirection,
+        number: String,
+        forceSpeakerphone: Boolean = false
+    ): Pair<StartResult?, List<SourceAttempt>> {
         if (mediaRecorder != null || dualRecorder != null) return Pair(null, emptyList())
+
+        // Force speakerphone BEFORE starting the recorder so the mic captures the
+        // far-end voice routed through the loudspeaker. Skip if a BT headset is
+        // already handling call audio — in that case SCO gives better quality.
+        if (forceSpeakerphone && !isBluetoothScoConnected()) {
+            applyForcedSpeakerphone(true)
+        }
 
         val targetFile = createFile(direction, number)
         val attempts = mutableListOf<SourceAttempt>()
@@ -89,14 +104,28 @@ class RecorderController(private val context: Context) {
         //  any additional API calls.
         val btScoNote = if (isBluetoothScoConnected()) " [BT-SCO active]" else ""
 
-        val orderedSources: List<Int> = listOf(
-            SOURCE_VOICE_CALL,           // 4  — both sides (OEM-relaxed path)
-            SOURCE_VOICE_DOWNLINK,       // 3  — speaker side (OEM-relaxed path)
-            SOURCE_VOICE_UPLINK,         // 2  — mic/telephony-stack side
-            MediaRecorder.AudioSource.VOICE_COMMUNICATION, // 7
-            MediaRecorder.AudioSource.VOICE_RECOGNITION,   // 6
-            MediaRecorder.AudioSource.MIC                  // 1
-        )
+        // Source order. When speakerphone is forced, we put raw MIC ahead of
+        // VOICE_COMMUNICATION — the latter applies AEC that treats speakerphone
+        // output as echo and cancels the far-end audio, producing a silent file.
+        val orderedSources: List<Int> = if (speakerphoneWasForced) {
+            listOf(
+                SOURCE_VOICE_CALL,
+                SOURCE_VOICE_DOWNLINK,
+                SOURCE_VOICE_UPLINK,
+                MediaRecorder.AudioSource.MIC,                 // raw mic: far-end audible via speaker
+                MediaRecorder.AudioSource.VOICE_RECOGNITION,
+                MediaRecorder.AudioSource.VOICE_COMMUNICATION  // last resort: AEC may silence remote side
+            )
+        } else {
+            listOf(
+                SOURCE_VOICE_CALL,
+                SOURCE_VOICE_DOWNLINK,
+                SOURCE_VOICE_UPLINK,
+                MediaRecorder.AudioSource.VOICE_COMMUNICATION,
+                MediaRecorder.AudioSource.VOICE_RECOGNITION,
+                MediaRecorder.AudioSource.MIC
+            )
+        }
 
         for (source in orderedSources) {
             val sourceName = sourceToName(source)
@@ -136,6 +165,7 @@ class RecorderController(private val context: Context) {
         }
 
         Log.e(TAG, "All sources exhausted — recording failed")
+        if (speakerphoneWasForced) applyForcedSpeakerphone(false)
         return Pair(null, attempts)
     }
 
@@ -145,6 +175,7 @@ class RecorderController(private val context: Context) {
             dualRecorder = null
             val saved = currentPath
             currentPath = null
+            if (speakerphoneWasForced) applyForcedSpeakerphone(false)
             return path ?: saved
         }
         mediaRecorder?.let { recorder ->
@@ -154,8 +185,10 @@ class RecorderController(private val context: Context) {
             mediaRecorder = null
             val path = currentPath
             currentPath = null
+            if (speakerphoneWasForced) applyForcedSpeakerphone(false)
             return path
         }
+        if (speakerphoneWasForced) applyForcedSpeakerphone(false)
         return currentPath
     }
 
@@ -184,6 +217,44 @@ class RecorderController(private val context: Context) {
             val am = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             am.isBluetoothScoOn
         } catch (_: Exception) { false }
+    }
+
+    /**
+     * Force loudspeaker on before starting capture so the microphone can pick up
+     * the far-end audio via the phone's own speaker — the only non-root way to
+     * get both call sides on stock Android 10+. Does NOT touch audio mode; the
+     * telephony stack owns MODE_IN_CALL during a cellular call.
+     *
+     * `enable=true` stores the prior speakerphone state and turns it on.
+     * `enable=false` restores the prior state and clears tracking flags.
+     */
+    private fun applyForcedSpeakerphone(enable: Boolean) {
+        val am = try {
+            context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        } catch (e: Exception) {
+            Log.w(TAG, "AudioManager unavailable — cannot toggle speakerphone", e)
+            return
+        }
+        if (enable) {
+            priorSpeakerphoneState = runCatching { am.isSpeakerphoneOn }.getOrNull()
+            runCatching {
+                @Suppress("DEPRECATION")
+                am.isSpeakerphoneOn = true
+            }.onFailure { Log.w(TAG, "setSpeakerphoneOn(true) failed", it) }
+            speakerphoneWasForced = true
+            Log.i(TAG, "Speakerphone forced ON for recording (prior=$priorSpeakerphoneState)")
+        } else {
+            val prior = priorSpeakerphoneState
+            if (prior != null) {
+                runCatching {
+                    @Suppress("DEPRECATION")
+                    am.isSpeakerphoneOn = prior
+                }.onFailure { Log.w(TAG, "restore speakerphone failed", it) }
+                Log.i(TAG, "Speakerphone restored to prior state=$prior")
+            }
+            priorSpeakerphoneState = null
+            speakerphoneWasForced = false
+        }
     }
 
     private fun createFile(direction: CallDirection, number: String): File {

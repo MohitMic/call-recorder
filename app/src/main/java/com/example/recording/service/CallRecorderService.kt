@@ -412,7 +412,12 @@ class CallRecorderService : Service() {
         )
 
         val hadOffhookBeforeRecorder = telephonySawOffhookSinceIdle
-        val (result, attempts) = recorderController.start(direction = direction, number = number)
+        val forceSpeaker = AppPrefs.isForceSpeakerphone(this)
+        val (result, attempts) = recorderController.start(
+            direction = direction,
+            number = number,
+            forceSpeakerphone = forceSpeaker
+        )
         if (result == null) {
             logCounter("record_start_fail_count")
             logDbg(
@@ -445,7 +450,12 @@ class CallRecorderService : Service() {
         ensureSessionDebug()
         val btActive = isBtScoActive()
         logDbg("RINGING: starting pre-ring capture btSco=${if (btActive) "ON" else "off"}")
-        val (result, attempts) = recorderController.start(CallDirection.INCOMING, "")
+        val forceSpeaker = AppPrefs.isForceSpeakerphone(this)
+        val (result, attempts) = recorderController.start(
+            direction = CallDirection.INCOMING,
+            number = "",
+            forceSpeakerphone = forceSpeaker
+        )
         if (result != null) {
             preRingResult = result
             preRingStartedAt = System.currentTimeMillis()

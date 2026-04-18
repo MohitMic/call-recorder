@@ -21,6 +21,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
     private lateinit var editKey: EditText
     private lateinit var btnSave: Button
     private lateinit var switchDelete: Switch
+    private lateinit var switchForceSpeaker: Switch
     private lateinit var btnTestConnection: Button
     private lateinit var btnScan: Button
     private lateinit var textScanStatus: TextView
@@ -28,18 +29,20 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        editUrl           = view.findViewById(R.id.editSupabaseUrl)
-        editKey           = view.findViewById(R.id.editSupabaseKey)
-        btnSave           = view.findViewById(R.id.btnSaveServer)
-        switchDelete      = view.findViewById(R.id.switchDeleteAfterUpload)
-        btnTestConnection = view.findViewById(R.id.btnTestConnection)
-        btnScan           = view.findViewById(R.id.btnCompatScan)
-        textScanStatus    = view.findViewById(R.id.textScanStatus)
+        editUrl            = view.findViewById(R.id.editSupabaseUrl)
+        editKey            = view.findViewById(R.id.editSupabaseKey)
+        btnSave            = view.findViewById(R.id.btnSaveServer)
+        switchDelete       = view.findViewById(R.id.switchDeleteAfterUpload)
+        switchForceSpeaker = view.findViewById(R.id.switchForceSpeaker)
+        btnTestConnection  = view.findViewById(R.id.btnTestConnection)
+        btnScan            = view.findViewById(R.id.btnCompatScan)
+        textScanStatus     = view.findViewById(R.id.textScanStatus)
 
         val ctx = requireContext()
         editUrl.setText(AppPrefs.getSupabaseUrl(ctx))
         editKey.setText(AppPrefs.getSupabaseKey(ctx))
         switchDelete.isChecked = AppPrefs.isDeleteAfterUpload(ctx)
+        switchForceSpeaker.isChecked = AppPrefs.isForceSpeakerphone(ctx)
 
         btnSave.setOnClickListener {
             AppPrefs.setSupabaseUrl(ctx, editUrl.text?.toString() ?: "")
@@ -50,6 +53,10 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
 
         switchDelete.setOnCheckedChangeListener { _, checked ->
             AppPrefs.setDeleteAfterUpload(ctx, checked)
+        }
+
+        switchForceSpeaker.setOnCheckedChangeListener { _, checked ->
+            AppPrefs.setForceSpeakerphone(ctx, checked)
         }
 
         btnTestConnection.setOnClickListener { testConnection() }

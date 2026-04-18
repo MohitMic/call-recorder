@@ -8,6 +8,7 @@ object AppPrefs {
     private const val KEY_SUPABASE_KEY = "supabase_anon_key"
     private const val KEY_WIFI_ONLY = "upload_wifi_only"
     private const val KEY_DELETE_AFTER = "delete_after_upload"
+    private const val KEY_FORCE_SPEAKER = "force_speakerphone_on_record"
 
     fun getSupabaseUrl(context: Context): String =
         prefs(context).getString(KEY_SUPABASE_URL, DEFAULT_SUPABASE_URL) ?: DEFAULT_SUPABASE_URL
@@ -32,6 +33,12 @@ object AppPrefs {
 
     fun setDeleteAfterUpload(context: Context, value: Boolean) =
         prefs(context).edit().putBoolean(KEY_DELETE_AFTER, value).apply()
+
+    fun isForceSpeakerphone(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_FORCE_SPEAKER, true)
+
+    fun setForceSpeakerphone(context: Context, value: Boolean) =
+        prefs(context).edit().putBoolean(KEY_FORCE_SPEAKER, value).apply()
 
     private fun prefs(context: Context) =
         context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
