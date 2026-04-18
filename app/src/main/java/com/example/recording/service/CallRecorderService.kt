@@ -35,6 +35,7 @@ import com.example.recording.model.UploadPayload
 import com.example.recording.recording.RecorderController
 import com.example.recording.ui.LiveRecorderStatus
 import com.example.recording.upload.UploadWorker
+import com.example.recording.watcher.NativeRecordingWatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.io.File
 import java.util.concurrent.atomic.AtomicLong
@@ -42,6 +43,7 @@ import java.util.concurrent.atomic.AtomicLong
 class CallRecorderService : Service() {
     private lateinit var telephonyManager: TelephonyManager
     private lateinit var recorderController: RecorderController
+    private lateinit var nativeWatcher: NativeRecordingWatcher
     private var callState: CallLifecycleState = CallLifecycleState.IDLE
     private var activeSession: ActiveCallSession? = null
     private val lastTransitionAt = AtomicLong(0L)
@@ -111,6 +113,8 @@ class CallRecorderService : Service() {
     override fun onCreate() {
         super.onCreate()
         recorderController = RecorderController(this)
+        nativeWatcher = NativeRecordingWatcher(this)
+        nativeWatcher.start()
         telephonyManager = getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
         telephonyListenerModeLabel = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             "TelephonyCallback (API ${Build.VERSION.SDK_INT})"
@@ -196,6 +200,7 @@ class CallRecorderService : Service() {
     }
 
     override fun onDestroy() {
+        nativeWatcher.stop()
         stopUiTicker()
         unregisterCallbacks()
         // Discard any pre-ring buffer that never got promoted
@@ -313,6 +318,12 @@ class CallRecorderService : Service() {
         detail.appendLine("System TelephonyManager.callState: ${readSystemCallStateName()}")
         detail.appendLine("OFFHOOK seen this call (callback): ${if (systemSawOffhook) "yes" else "no"}")
         detail.appendLine("Bluetooth SCO (headset): ${if (btActive) "ON — headset routing active" else "off"}")
+        val oemFolders = nativeWatcher.detectedFolders()
+        if (oemFolders.isNotEmpty()) {
+            detail.appendLine("OEM recording folders watched: ${oemFolders.joinToString()}")
+        } else {
+            detail.appendLine("OEM recording folders: none detected yet")
+        }
         if (preRingActive) {
             detail.appendLine("Pre-ring buffer: recording since RINGING (awaiting answer)")
         }
