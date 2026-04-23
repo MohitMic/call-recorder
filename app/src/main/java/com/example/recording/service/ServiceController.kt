@@ -5,8 +5,9 @@ import android.content.Intent
 import android.os.Build
 
 object ServiceController {
-    const val ACTION_START = "com.example.recording.START"
-    const val ACTION_STOP  = "com.example.recording.STOP"
+    const val ACTION_START          = "com.example.recording.START"
+    const val ACTION_STOP           = "com.example.recording.STOP"
+    const val ACTION_RESTART_WATCHER = "com.example.recording.RESTART_WATCHER"
     const val ACTION_RECORDING_CONFIRMED_START = "com.example.recording.RECORDING_CONFIRMED_START"
     const val ACTION_RECORDING_CONFIRMED_END   = "com.example.recording.RECORDING_CONFIRMED_END"
     const val ACTION_MEDIA_PROJECTION_GRANTED  = "com.example.recording.MEDIA_PROJECTION_GRANTED"
@@ -40,6 +41,14 @@ object ServiceController {
             setPackage(context.packageName)
         }
         context.startService(intent)
+    }
+
+    /** Restart the OEM folder watcher with updated brand/folder settings. */
+    fun restartWatcher(context: Context) {
+        context.startService(
+            Intent(context, CallRecorderService::class.java)
+                .setAction(ACTION_RESTART_WATCHER)
+        )
     }
 
     /** Called from MainActivity after user grants MediaProjection permission. */

@@ -138,6 +138,11 @@ class CallRecorderService : Service() {
             ServiceController.ACTION_MEDIA_PROJECTION_GRANTED -> {
                 handleMediaProjectionGranted(intent)
             }
+            ServiceController.ACTION_RESTART_WATCHER -> {
+                nativeWatcher.stop()
+                nativeWatcher.start()
+                logDbg("NativeRecordingWatcher restarted via settings change")
+            }
             ServiceController.ACTION_RECORDING_CONFIRMED_START -> {
                 startForeground(NOTIFICATION_ID, buildNotification())
                 ensureSessionDebug()
@@ -553,15 +558,12 @@ class CallRecorderService : Service() {
         UploadWorker.enqueue(
             context = this,
             payload = UploadPayload(
-                filePath = savedPath,
-                number = session.number,
-                direction = session.direction.name,
+                filePath        = savedPath,
+                number          = session.number,
+                direction       = session.direction.name,
                 timestampMillis = session.startedAt,
-                durationMillis = duration,
-                sourceUsed = session.sourceUsed
-            ),
-            requireUnmetered = AppPrefs.isWifiOnly(this),
-            deleteAfterUpload = AppPrefs.isDeleteAfterUpload(this)
+                durationMillis  = duration,
+                sourceUsed      = session.sourceUsed
         )
         activeSession = null
         pushLiveStatus()

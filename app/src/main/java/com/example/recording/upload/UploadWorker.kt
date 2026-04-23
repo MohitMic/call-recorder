@@ -10,6 +10,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.example.recording.AppPrefs
+import com.example.recording.Config
 import com.example.recording.model.UploadPayload
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -24,54 +25,51 @@ class UploadWorker(
     override suspend fun doWork(): Result {
         val payloadRaw = inputData.getString(KEY_PAYLOAD) ?: return Result.failure()
         val deleteAfterUpload = inputData.getBoolean(KEY_DELETE_AFTER_UPLOAD, false)
-        val supabaseUrl = inputData.getString(KEY_SUPABASE_URL) ?: ""
-        val supabaseKey = inputData.getString(KEY_SUPABASE_KEY) ?: ""
 
         val payload = Json.decodeFromString<UploadPayload>(payloadRaw)
-
-        val uploader = FileUploader(supabaseUrl = supabaseUrl, supabaseKey = supabaseKey)
-        val success = runCatching { uploader.upload(payload) }.getOrDefault(false)
-        if (!success) return Result.retry()
-
-        // Write a marker file so the UI can show "Uploaded" status
         val src = File(payload.filePath)
-        File(src.parentFile, "${src.nameWithoutExtension}.uploaded").createNewFile()
+        val failedMarker   = File(src.parentFile, "${src.nameWithoutExtension}.failed")
+        val uploadedMarker = File(src.parentFile, "${src.nameWithoutExtension}.uploaded")
 
-        if (deleteAfterUpload) {
-            src.delete()
+        val uploader = FileUploader(
+            supabaseUrl = Config.SUPABASE_URL,
+            supabaseKey = Config.SUPABASE_KEY,
+            bucketName  = Config.STORAGE_BUCKET
+        )
+        val success = runCatching { uploader.upload(payload) }.getOrDefault(false)
+
+        return if (success) {
+            // Clear failure marker if present, write success marker
+            failedMarker.delete()
+            uploadedMarker.createNewFile()
+            if (deleteAfterUpload) src.delete()
+            Result.success()
+        } else {
+            // Write failure marker so UI shows "Upload Failed" immediately
+            runCatching { failedMarker.createNewFile() }
+            Result.retry()
         }
-        return Result.success()
     }
 
     companion object {
-        private const val KEY_PAYLOAD = "payload"
+        private const val KEY_PAYLOAD            = "payload"
         private const val KEY_DELETE_AFTER_UPLOAD = "deleteAfterUpload"
-        private const val KEY_SUPABASE_URL = "supabaseUrl"
-        private const val KEY_SUPABASE_KEY = "supabaseKey"
 
-        fun enqueue(
-            context: Context,
-            payload: UploadPayload,
-            requireUnmetered: Boolean,
-            deleteAfterUpload: Boolean
-        ) {
+        fun enqueue(context: Context, payload: UploadPayload) {
             val data = Data.Builder()
                 .putString(KEY_PAYLOAD, Json.encodeToString(payload))
-                .putBoolean(KEY_DELETE_AFTER_UPLOAD, deleteAfterUpload)
-                .putString(KEY_SUPABASE_URL, AppPrefs.getSupabaseUrl(context))
-                .putString(KEY_SUPABASE_KEY, AppPrefs.getSupabaseKey(context))
+                .putBoolean(KEY_DELETE_AFTER_UPLOAD, AppPrefs.isDeleteAfterUpload(context))
                 .build()
 
+            // Always upload on any connection — no WiFi-only restriction
             val constraints = Constraints.Builder()
-                .setRequiredNetworkType(
-                    if (requireUnmetered) NetworkType.UNMETERED else NetworkType.CONNECTED
-                )
+                .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
 
             val request = OneTimeWorkRequestBuilder<UploadWorker>()
                 .setInputData(data)
                 .setConstraints(constraints)
-                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.SECONDS)
+                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 15, TimeUnit.SECONDS)
                 .build()
 
             WorkManager.getInstance(context).enqueue(request)

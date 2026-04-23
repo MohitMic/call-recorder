@@ -1,188 +1,111 @@
 package com.example.recording
 
-import android.app.AlertDialog
 import android.os.Bundle
 import android.view.View
-import android.widget.Button
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.Spinner
 import android.widget.Switch
 import android.widget.TextView
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
+import com.example.recording.AppPrefs.DeviceBrand
+import com.example.recording.service.CallRecorderService
+import com.example.recording.service.ServiceController
+import com.example.recording.watcher.NativeRecordingWatcher
 
 class SettingsFragment : Fragment(R.layout.fragment_settings) {
 
-    private lateinit var editUrl: EditText
-    private lateinit var editKey: EditText
-    private lateinit var btnSave: Button
-    private lateinit var switchDelete: Switch
-    private lateinit var switchForceSpeaker: Switch
-    private lateinit var btnTestConnection: Button
-    private lateinit var btnScan: Button
-    private lateinit var textScanStatus: TextView
+    private lateinit var spinnerBrand       : Spinner
+    private lateinit var layoutCustomFolder : LinearLayout
+    private lateinit var editCustomFolder   : EditText
+    private lateinit var textFolderHint     : TextView
+    private lateinit var switchForceSpeaker : Switch
+    private lateinit var switchDelete       : Switch
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        editUrl            = view.findViewById(R.id.editSupabaseUrl)
-        editKey            = view.findViewById(R.id.editSupabaseKey)
-        btnSave            = view.findViewById(R.id.btnSaveServer)
-        switchDelete       = view.findViewById(R.id.switchDeleteAfterUpload)
+        spinnerBrand       = view.findViewById(R.id.spinnerDeviceBrand)
+        layoutCustomFolder = view.findViewById(R.id.layoutCustomFolder)
+        editCustomFolder   = view.findViewById(R.id.editCustomFolder)
+        textFolderHint     = view.findViewById(R.id.textFolderHint)
         switchForceSpeaker = view.findViewById(R.id.switchForceSpeaker)
-        btnTestConnection  = view.findViewById(R.id.btnTestConnection)
-        btnScan            = view.findViewById(R.id.btnCompatScan)
-        textScanStatus     = view.findViewById(R.id.textScanStatus)
+        switchDelete       = view.findViewById(R.id.switchDeleteAfterUpload)
 
         val ctx = requireContext()
-        editUrl.setText(AppPrefs.getSupabaseUrl(ctx))
-        editKey.setText(AppPrefs.getSupabaseKey(ctx))
-        switchDelete.isChecked = AppPrefs.isDeleteAfterUpload(ctx)
+
+        // ── Device brand spinner ─────────────────────────────────────────────
+        val adapter = ArrayAdapter(
+            ctx,
+            android.R.layout.simple_spinner_item,
+            DeviceBrand.labels()
+        ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+        spinnerBrand.adapter = adapter
+        spinnerBrand.setSelection(AppPrefs.getDeviceBrand(ctx).ordinal)
+
+        spinnerBrand.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, v: View?, pos: Int, id: Long) {
+                val brand = DeviceBrand.values()[pos]
+                AppPrefs.setDeviceBrand(ctx, brand)
+                updateFolderHint(brand)
+                layoutCustomFolder.visibility =
+                    if (brand == DeviceBrand.CUSTOM) View.VISIBLE else View.GONE
+                restartWatcher()
+            }
+            override fun onNothingSelected(parent: AdapterView<*>) {}
+        }
+
+        // ── Custom folder input ──────────────────────────────────────────────
+        editCustomFolder.setText(AppPrefs.getCustomFolder(ctx))
+        editCustomFolder.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
+                val path = editCustomFolder.text?.toString() ?: ""
+                AppPrefs.setCustomFolder(ctx, path)
+                restartWatcher()
+            }
+        }
+
+        // Initial state
+        val currentBrand = AppPrefs.getDeviceBrand(ctx)
+        layoutCustomFolder.visibility =
+            if (currentBrand == DeviceBrand.CUSTOM) View.VISIBLE else View.GONE
+        updateFolderHint(currentBrand)
+
+        // ── Recording toggles ────────────────────────────────────────────────
         switchForceSpeaker.isChecked = AppPrefs.isForceSpeakerphone(ctx)
-
-        btnSave.setOnClickListener {
-            AppPrefs.setSupabaseUrl(ctx, editUrl.text?.toString() ?: "")
-            AppPrefs.setSupabaseKey(ctx, editKey.text?.toString() ?: "")
-            btnSave.text = "Saved"
-            btnSave.postDelayed({ btnSave.text = "Save" }, 2000)
-        }
-
-        switchDelete.setOnCheckedChangeListener { _, checked ->
-            AppPrefs.setDeleteAfterUpload(ctx, checked)
-        }
-
         switchForceSpeaker.setOnCheckedChangeListener { _, checked ->
             AppPrefs.setForceSpeakerphone(ctx, checked)
         }
 
-        btnTestConnection.setOnClickListener { testConnection() }
-        btnScan.setOnClickListener { runCompatScan() }
-    }
-
-    private fun testConnection() {
-        val url = editUrl.text?.toString()?.trim() ?: ""
-        val key = editKey.text?.toString()?.trim() ?: ""
-
-        if (url.isBlank() || key.isBlank()) {
-            showDialog("Connection Test", "Please enter Supabase URL and key first.")
-            return
-        }
-
-        btnTestConnection.isEnabled = false
-        btnTestConnection.text = "Testing..."
-
-        viewLifecycleOwner.lifecycleScope.launch {
-            val result = withContext(Dispatchers.IO) {
-                runCatching {
-                    // List files in the bucket — simple authenticated GET
-                    val testUrl = "${url.trimEnd('/')}/storage/v1/bucket"
-                    val client = OkHttpClient()
-                    val request = Request.Builder()
-                        .url(testUrl)
-                        .addHeader("Authorization", "Bearer $key")
-                        .addHeader("apikey", key)
-                        .get()
-                        .build()
-                    client.newCall(request).execute().use { response ->
-                        "${response.code} ${response.message}\n\n" +
-                        (response.body?.string()?.take(400) ?: "(empty body)")
-                    }
-                }.getOrElse { "Error: ${it.message}" }
-            }
-
-            btnTestConnection.isEnabled = true
-            btnTestConnection.text = "Test Connection"
-
-            val ok = result.startsWith("200") || result.startsWith("2")
-            val title = if (ok) "Connection OK" else "Connection FAILED"
-            showDialog(title, result)
+        switchDelete.isChecked = AppPrefs.isDeleteAfterUpload(ctx)
+        switchDelete.setOnCheckedChangeListener { _, checked ->
+            AppPrefs.setDeleteAfterUpload(ctx, checked)
         }
     }
 
-    private fun showDialog(title: String, message: String) {
-        AlertDialog.Builder(requireContext())
-            .setTitle(title)
-            .setMessage(message)
-            .setPositiveButton("OK", null)
-            .show()
-    }
-
-    private fun runCompatScan() {
-        btnScan.isEnabled = false
-        btnScan.text = getString(R.string.scan_running)
-        textScanStatus.visibility = View.VISIBLE
-        textScanStatus.text = "Starting scan..."
-
-        viewLifecycleOwner.lifecycleScope.launch {
-            val scanner = CompatibilityScanner(requireContext())
-            val results = withContext(Dispatchers.IO) {
-                scanner.scan { msg ->
-                    launch(Dispatchers.Main) { textScanStatus.text = msg }
-                }
-            }
-
-            btnScan.isEnabled = true
-            btnScan.text = getString(R.string.btn_compat_scan)
-
-            val sb = StringBuilder()
-            for (r in results) {
-                val emoji = when (r.status) {
-                    CompatibilityScanner.ScanStatus.WORKS             -> "[OK]"
-                    CompatibilityScanner.ScanStatus.ACCESSIBLE_SILENT -> "[SILENT]"
-                    CompatibilityScanner.ScanStatus.BLOCKED           -> "[BLOCKED]"
-                    CompatibilityScanner.ScanStatus.FAILED            -> "[FAILED]"
-                }
-                val label = when (r.status) {
-                    CompatibilityScanner.ScanStatus.WORKS             -> getString(R.string.scan_works)
-                    CompatibilityScanner.ScanStatus.ACCESSIBLE_SILENT -> getString(R.string.scan_silent)
-                    CompatibilityScanner.ScanStatus.BLOCKED           -> getString(R.string.scan_blocked)
-                    CompatibilityScanner.ScanStatus.FAILED            -> getString(R.string.scan_failed)
-                }
-                sb.appendLine("$emoji  ${r.sourceName} (${r.sourceValue})")
-                sb.appendLine("    $label")
-                if (r.fileSizeBytes > 0) sb.appendLine("    ${r.fileSizeBytes} bytes recorded")
-                if (r.errorMessage.isNotBlank()) sb.appendLine("    ${r.errorMessage}")
-                sb.appendLine()
-            }
-
-            sb.appendLine("─────────────────────────────────────")
-            sb.appendLine(buildChainSummary(results))
-
-            textScanStatus.text = sb.toString().trimEnd()
-
-            AlertDialog.Builder(requireContext())
-                .setTitle(getString(R.string.scan_done_title))
-                .setMessage(sb.toString().trimEnd())
-                .setPositiveButton("OK", null)
-                .show()
+    private fun updateFolderHint(brand: DeviceBrand) {
+        val hint = when (brand) {
+            DeviceBrand.AUTO ->
+                "Watching all known folders automatically."
+            DeviceBrand.XIAOMI_REDMI_POCO ->
+                "Folders:\n• MIUI/sound_recorder/call_rec\n• Recordings/Call Recording"
+            DeviceBrand.VIVO ->
+                "Folders:\n• Record/Call\n• Sounds/CallRecord"
+            DeviceBrand.ONEPLUS_OPPO ->
+                "Folders:\n• CallRecording\n• Recordings/CallRecording"
+            DeviceBrand.CUSTOM ->
+                "Enter the full path to your OEM's call recording folder."
         }
+        textFolderHint.text = hint
     }
 
-    private fun buildChainSummary(results: List<CompatibilityScanner.SourceResult>): String {
-        val workingNames = results
-            .filter { it.status == CompatibilityScanner.ScanStatus.WORKS }
-            .map { it.sourceName }
-            .toSet()
-
-        val chain = listOf(
-            "VOICE_CALL", "VOICE_DOWNLINK", "VOICE_UPLINK",
-            "VOICE_COMMUNICATION", "VOICE_RECOGNITION", "MIC"
-        )
-        val effectiveChain = chain.filter { it in workingNames }
-
-        return if (effectiveChain.isEmpty()) {
-            "No sources confirmed working. Recording may produce silent files."
-        } else {
-            val primary = effectiveChain.first()
-            val oemNote = if (primary in listOf("VOICE_CALL", "VOICE_DOWNLINK", "VOICE_UPLINK"))
-                " (OEM-extended, both call sides)"
-            else
-                " (mic only)"
-            "Primary: $primary$oemNote\nChain: ${effectiveChain.joinToString(" -> ")}"
+    /** Tell the running service to restart its file watchers with the new config. */
+    private fun restartWatcher() {
+        val ctx = requireContext()
+        if (CallRecorderService.isRunning.value) {
+            ServiceController.restartWatcher(ctx)
         }
     }
 }

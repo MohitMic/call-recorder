@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.FileObserver
 import android.util.Log
 import com.example.recording.AppPrefs
+import com.example.recording.AppPrefs.DeviceBrand
 import com.example.recording.model.UploadPayload
 import com.example.recording.upload.UploadWorker
 import java.io.File
@@ -19,22 +20,20 @@ class NativeRecordingWatcher(private val context: Context) {
 
     private val activeObservers = mutableListOf<FileObserver>()
 
-    /** All known OEM recording folder paths, ordered by most common first. */
-    private val candidatePaths = listOf(
-        // Xiaomi / Redmi / POCO — MIUI & HyperOS
-        "/storage/emulated/0/MIUI/sound_recorder/call_rec",
-        "/storage/emulated/0/Recordings/Call Recording",
-        "/storage/emulated/0/Music/Call Recording",
-        // Vivo — FuntouchOS
-        "/storage/emulated/0/Record/Call",
-        "/storage/emulated/0/Sounds/CallRecord",
-        // OnePlus / Oppo — OxygenOS / ColorOS
-        "/storage/emulated/0/CallRecording",
-        "/storage/emulated/0/Recordings/CallRecording"
-    )
+    /** Resolve which folder paths to watch based on current brand preference. */
+    private fun resolvePaths(): List<String> {
+        val brand = AppPrefs.getDeviceBrand(context)
+        return if (brand == DeviceBrand.CUSTOM) {
+            val custom = AppPrefs.getCustomFolder(context)
+            if (custom.isBlank()) emptyList() else listOf(custom)
+        } else {
+            brand.folders
+        }
+    }
 
     fun start() {
         stop()
+        val candidatePaths = resolvePaths()
         val watching = mutableListOf<String>()
         candidatePaths.forEach { path ->
             val dir = File(path)
@@ -55,7 +54,7 @@ class NativeRecordingWatcher(private val context: Context) {
 
     /** Returns all OEM folders that actually exist on this device. */
     fun detectedFolders(): List<String> =
-        candidatePaths.filter { File(it).exists() }
+        resolvePaths().filter { File(it).exists() }
 
     @Suppress("DEPRECATION")
     private fun buildObserver(dir: File): FileObserver {
@@ -114,15 +113,13 @@ class NativeRecordingWatcher(private val context: Context) {
         UploadWorker.enqueue(
             context = context,
             payload = UploadPayload(
-                filePath   = file.absolutePath,
-                number     = meta.number,
-                direction  = meta.direction,
+                filePath        = file.absolutePath,
+                number          = meta.number,
+                direction       = meta.direction,
                 timestampMillis = meta.timestampMs,
                 durationMillis  = 0L,
-                sourceUsed = "OEM_NATIVE"
-            ),
-            requireUnmetered = AppPrefs.isWifiOnly(context),
-            deleteAfterUpload = AppPrefs.isDeleteAfterUpload(context)
+                sourceUsed      = "OEM_NATIVE"
+            )
         )
     }
 

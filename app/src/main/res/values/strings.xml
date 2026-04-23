@@ -70,12 +70,11 @@
     <string name="live_status_placeholder">Start the service, then open this screen while on a call.</string>
 
     <string name="settings_title">Settings</string>
-    <string name="settings_server_title">Server Configuration</string>
-    <string name="settings_server_subtitle">Supabase project for storing recordings</string>
-    <string name="hint_supabase_url">Supabase URL (https://xxxx.supabase.co)</string>
-    <string name="hint_supabase_key">Anon / Public Key</string>
+    <string name="settings_device_title">Device Brand</string>
+    <string name="settings_device_subtitle">Selects which folder your OEM dialler saves recordings to</string>
+    <string name="settings_custom_folder_label">Custom folder path</string>
+    <string name="settings_custom_folder_hint">/storage/emulated/0/YourBrand/CallRecording</string>
     <string name="settings_upload_title">Upload Behaviour</string>
-    <string name="settings_wifi_only">Upload on Wi-Fi only</string>
     <string name="settings_delete_after">Delete local file after upload</string>
     <string name="settings_recording_title">Recording Behaviour</string>
     <string name="settings_force_speaker">Force speakerphone during call</string>

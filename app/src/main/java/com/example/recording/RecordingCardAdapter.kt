@@ -13,6 +13,8 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.example.recording.AppPrefs
+import com.example.recording.AppPrefs.DeviceBrand
 import com.example.recording.model.RecordingDebugReport
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -24,7 +26,7 @@ import java.util.Locale
 
 enum class HealthStatus { GOOD, PARTIAL, SILENT_RISK, UNKNOWN }
 
-enum class UploadStatus { UPLOADED, PENDING, NOT_CONFIGURED }
+enum class UploadStatus { UPLOADED, PENDING, FAILED, NOT_CONFIGURED }
 
 data class RecordingItem(
     val file: File,
@@ -109,6 +111,7 @@ class RecordingCardAdapter(
             val (uploadText, uploadColor) = when (item.uploadStatus) {
                 UploadStatus.UPLOADED       -> "Uploaded" to "#2E7D32"
                 UploadStatus.PENDING        -> "Upload pending" to "#E65100"
+                UploadStatus.FAILED         -> "Upload failed — retrying" to "#B71C1C"
                 UploadStatus.NOT_CONFIGURED -> "Server not set" to "#9E9E9E"
             }
             textUploadStatus.text = uploadText
@@ -158,9 +161,10 @@ class RecordingCardAdapter(
                 sb.appendLine()
                 sb.appendLine("UPLOAD")
                 sb.appendLine("  Status: ${when (item.uploadStatus) {
-                    UploadStatus.UPLOADED -> "Uploaded to server"
-                    UploadStatus.PENDING -> "Queued / not yet uploaded"
-                    UploadStatus.NOT_CONFIGURED -> "No server configured in Settings"
+                    UploadStatus.UPLOADED       -> "Uploaded to server"
+                    UploadStatus.PENDING        -> "Queued / not yet uploaded"
+                    UploadStatus.FAILED         -> "Upload failed — WorkManager is retrying"
+                    UploadStatus.NOT_CONFIGURED -> "No server configured"
                 }}")
                 if (r.hints.isNotEmpty()) {
                     sb.appendLine()
@@ -255,29 +259,62 @@ class RecordingCardAdapter(
 
         private val json = Json { ignoreUnknownKeys = true }
 
+        private val AUDIO_EXTENSIONS = setOf("mp4", "mp3", "m4a", "amr", "aac", "wav", "ogg", "3gp")
+
         fun loadItems(context: Context): List<RecordingItem> {
-            val dir = File(context.getExternalFilesDir(null), "CallRecordings")
-            val files = dir.listFiles { f -> f.isFile && f.extension.equals("mp4", ignoreCase = true) }
-                ?.sortedByDescending { it.lastModified() }
-                ?.toList() ?: return emptyList()
+            // Collect files from app-internal folder AND configured OEM folders
+            val allFiles = mutableListOf<File>()
 
-            val supabaseConfigured = AppPrefs.getSupabaseUrl(context).isNotBlank() &&
-                                     AppPrefs.getSupabaseKey(context).isNotBlank()
+            // App-internal recordings
+            val appDir = File(context.getExternalFilesDir(null), "CallRecordings")
+            appDir.listFiles { f -> f.isFile && f.extension.lowercase() in AUDIO_EXTENSIONS }
+                ?.let { allFiles.addAll(it) }
 
-            return files.map { mp4 ->
-                val sidecar  = File(mp4.parentFile, "${mp4.nameWithoutExtension}_debug.json")
-                val uploaded = File(mp4.parentFile, "${mp4.nameWithoutExtension}.uploaded")
-                val report   = if (sidecar.exists()) {
-                    runCatching { json.decodeFromString<RecordingDebugReport>(sidecar.readText()) }.getOrNull()
-                } else null
-                val uploadStatus = when {
-                    uploaded.exists()      -> UploadStatus.UPLOADED
-                    !supabaseConfigured    -> UploadStatus.NOT_CONFIGURED
-                    else                   -> UploadStatus.PENDING
+            // OEM brand folders
+            val brand = AppPrefs.getDeviceBrand(context)
+            val oemPaths = if (brand == DeviceBrand.CUSTOM) {
+                val c = AppPrefs.getCustomFolder(context)
+                if (c.isBlank()) emptyList() else listOf(c)
+            } else {
+                brand.folders
+            }
+            oemPaths.forEach { path ->
+                val dir = File(path)
+                if (dir.exists()) {
+                    dir.listFiles { f ->
+                        f.isFile && f.extension.lowercase() in AUDIO_EXTENSIONS
+                    }?.let { allFiles.addAll(it) }
                 }
+            }
+
+            if (allFiles.isEmpty()) return emptyList()
+
+            // De-duplicate by absolute path and sort newest first
+            val files = allFiles
+                .distinctBy { it.absolutePath }
+                .sortedByDescending { it.lastModified() }
+
+            return files.map { file ->
+                val sidecar      = File(file.parentFile, "${file.nameWithoutExtension}_debug.json")
+                val uploadedMark = File(file.parentFile, "${file.nameWithoutExtension}.uploaded")
+                val failedMark   = File(file.parentFile, "${file.nameWithoutExtension}.failed")
+
+                val report = if (sidecar.exists()) {
+                    runCatching {
+                        json.decodeFromString<RecordingDebugReport>(sidecar.readText())
+                    }.getOrNull()
+                } else null
+
+                val uploadStatus = when {
+                    uploadedMark.exists() -> UploadStatus.UPLOADED
+                    failedMark.exists()   -> UploadStatus.FAILED
+                    else                  -> UploadStatus.PENDING
+                }
+
                 RecordingItem(
-                    file = mp4, report = report,
-                    health = computeHealth(mp4, report),
+                    file         = file,
+                    report       = report,
+                    health       = computeHealth(file, report),
                     uploadStatus = uploadStatus
                 )
             }

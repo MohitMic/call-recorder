@@ -4,29 +4,16 @@ import android.content.Context
 
 object AppPrefs {
     private const val PREFS_NAME = "call_recorder_prefs"
-    private const val KEY_SUPABASE_URL = "supabase_url"
-    private const val KEY_SUPABASE_KEY = "supabase_anon_key"
-    private const val KEY_WIFI_ONLY = "upload_wifi_only"
-    private const val KEY_DELETE_AFTER = "delete_after_upload"
-    private const val KEY_FORCE_SPEAKER = "force_speakerphone_on_record"
 
-    fun getSupabaseUrl(context: Context): String =
-        prefs(context).getString(KEY_SUPABASE_URL, DEFAULT_SUPABASE_URL) ?: DEFAULT_SUPABASE_URL
+    // Recording behaviour
+    private const val KEY_DELETE_AFTER         = "delete_after_upload"
+    private const val KEY_FORCE_SPEAKER        = "force_speakerphone_on_record"
 
-    fun setSupabaseUrl(context: Context, url: String) =
-        prefs(context).edit().putString(KEY_SUPABASE_URL, url.trim()).apply()
+    // OEM folder selection
+    private const val KEY_DEVICE_BRAND         = "oem_device_brand"
+    private const val KEY_CUSTOM_FOLDER        = "oem_custom_folder"
 
-    fun getSupabaseKey(context: Context): String =
-        prefs(context).getString(KEY_SUPABASE_KEY, DEFAULT_SUPABASE_KEY) ?: DEFAULT_SUPABASE_KEY
-
-    fun setSupabaseKey(context: Context, key: String) =
-        prefs(context).edit().putString(KEY_SUPABASE_KEY, key.trim()).apply()
-
-    fun isWifiOnly(context: Context): Boolean =
-        prefs(context).getBoolean(KEY_WIFI_ONLY, false)
-
-    fun setWifiOnly(context: Context, value: Boolean) =
-        prefs(context).edit().putBoolean(KEY_WIFI_ONLY, value).apply()
+    // ── Recording behaviour ───────────────────────────────────────────────────
 
     fun isDeleteAfterUpload(context: Context): Boolean =
         prefs(context).getBoolean(KEY_DELETE_AFTER, false)
@@ -40,9 +27,75 @@ object AppPrefs {
     fun setForceSpeakerphone(context: Context, value: Boolean) =
         prefs(context).edit().putBoolean(KEY_FORCE_SPEAKER, value).apply()
 
+    // ── OEM folder selection ──────────────────────────────────────────────────
+
+    /** Which brand preset is selected. Default = AUTO so we watch all known folders. */
+    fun getDeviceBrand(context: Context): DeviceBrand =
+        runCatching {
+            DeviceBrand.valueOf(
+                prefs(context).getString(KEY_DEVICE_BRAND, DeviceBrand.AUTO.name)!!
+            )
+        }.getOrDefault(DeviceBrand.AUTO)
+
+    fun setDeviceBrand(context: Context, brand: DeviceBrand) =
+        prefs(context).edit().putString(KEY_DEVICE_BRAND, brand.name).apply()
+
+    /** Custom folder path, used when DeviceBrand == CUSTOM. */
+    fun getCustomFolder(context: Context): String =
+        prefs(context).getString(KEY_CUSTOM_FOLDER, "") ?: ""
+
+    fun setCustomFolder(context: Context, path: String) =
+        prefs(context).edit().putString(KEY_CUSTOM_FOLDER, path.trim()).apply()
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
     private fun prefs(context: Context) =
         context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    const val DEFAULT_SUPABASE_URL = "https://tahyfwvlnlufqkzknbcm.supabase.co"
-    const val DEFAULT_SUPABASE_KEY = "sb_publishable_VPkvLBuf_p8ltI4LH0bTuw_PHp6rLYn"
+    // ── Brand enum ────────────────────────────────────────────────────────────
+
+    enum class DeviceBrand(val label: String, val folders: List<String>) {
+        AUTO(
+            "Auto-detect (recommended)",
+            listOf(
+                "/storage/emulated/0/MIUI/sound_recorder/call_rec",
+                "/storage/emulated/0/Recordings/Call Recording",
+                "/storage/emulated/0/Music/Call Recording",
+                "/storage/emulated/0/Record/Call",
+                "/storage/emulated/0/Sounds/CallRecord",
+                "/storage/emulated/0/CallRecording",
+                "/storage/emulated/0/Recordings/CallRecording"
+            )
+        ),
+        XIAOMI_REDMI_POCO(
+            "Xiaomi / Redmi / POCO",
+            listOf(
+                "/storage/emulated/0/MIUI/sound_recorder/call_rec",
+                "/storage/emulated/0/Recordings/Call Recording",
+                "/storage/emulated/0/Music/Call Recording"
+            )
+        ),
+        VIVO(
+            "Vivo",
+            listOf(
+                "/storage/emulated/0/Record/Call",
+                "/storage/emulated/0/Sounds/CallRecord"
+            )
+        ),
+        ONEPLUS_OPPO(
+            "OnePlus / Oppo",
+            listOf(
+                "/storage/emulated/0/CallRecording",
+                "/storage/emulated/0/Recordings/CallRecording"
+            )
+        ),
+        CUSTOM(
+            "Custom folder",
+            emptyList() // resolved at runtime via getCustomFolder()
+        );
+
+        companion object {
+            fun labels(): Array<String> = values().map { it.label }.toTypedArray()
+        }
+    }
 }

@@ -83,7 +83,17 @@ class FileUploader(
     // PUT /storage/v1/object/{bucket}/{storagePath}
     private fun uploadToStorage(file: File, storagePath: String): Boolean {
         val url = "${supabaseUrl.trimEnd('/')}/storage/v1/object/$bucketName/$storagePath"
-        val body = file.asRequestBody("audio/mp4".toMediaTypeOrNull())
+        val mime = when (file.extension.lowercase()) {
+            "mp3"  -> "audio/mpeg"
+            "m4a"  -> "audio/mp4"
+            "amr"  -> "audio/amr"
+            "aac"  -> "audio/aac"
+            "wav"  -> "audio/wav"
+            "ogg"  -> "audio/ogg"
+            "3gp"  -> "audio/3gpp"
+            else   -> "audio/mp4"
+        }
+        val body = file.asRequestBody(mime.toMediaTypeOrNull())
         val request = Request.Builder()
             .url(url)
             .addHeader("Authorization", "Bearer $supabaseKey")
