@@ -27,6 +27,8 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
     private lateinit var textFolderHint     : TextView
     private lateinit var switchForceSpeaker : Switch
     private lateinit var switchDelete       : Switch
+    private lateinit var editDeviceLabel    : EditText
+    private lateinit var textDeviceId       : TextView
 
     // System folder picker launcher
     private val folderPickerLauncher = registerForActivityResult(
@@ -63,6 +65,8 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         textFolderHint     = view.findViewById(R.id.textFolderHint)
         switchForceSpeaker = view.findViewById(R.id.switchForceSpeaker)
         switchDelete       = view.findViewById(R.id.switchDeleteAfterUpload)
+        editDeviceLabel    = view.findViewById(R.id.editDeviceLabel)
+        textDeviceId       = view.findViewById(R.id.textDeviceId)
 
         val ctx = requireContext()
 
@@ -121,6 +125,15 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         switchDelete.setOnCheckedChangeListener { _, checked ->
             AppPrefs.setDeleteAfterUpload(ctx, checked)
         }
+
+        // ── Device identity ──────────────────────────────────────────────────
+        editDeviceLabel.setText(AppPrefs.getDeviceLabel(ctx))
+        editDeviceLabel.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
+                AppPrefs.setDeviceLabel(ctx, editDeviceLabel.text?.toString() ?: "")
+            }
+        }
+        textDeviceId.text = "Device ID: ${AppPrefs.getDeviceId(ctx)}"
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

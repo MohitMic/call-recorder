@@ -135,6 +135,8 @@ class FileUploader(
             put("recorded_at",    iso8601(payload.timestampMillis))
             put("duration_ms",    payload.durationMillis)
             put("source_used",    payload.sourceUsed)
+            put("device_id",      payload.deviceId.ifBlank { null })
+            put("device_label",   payload.deviceLabel.ifBlank { null })
         }.toString()
 
         val body    = json.toRequestBody("application/json".toMediaTypeOrNull())

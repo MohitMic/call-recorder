@@ -25,7 +25,13 @@ class UploadWorker(
         val payloadRaw = inputData.getString(KEY_PAYLOAD) ?: return Result.failure()
         val deleteAfterUpload = inputData.getBoolean(KEY_DELETE_AFTER_UPLOAD, false)
 
-        val payload = Json.decodeFromString<UploadPayload>(payloadRaw)
+        val rawPayload = Json.decodeFromString<UploadPayload>(payloadRaw)
+        // Always tag with this device's id/label at upload time, in case the
+        // payload was enqueued before these fields existed.
+        val payload = rawPayload.copy(
+            deviceId    = AppPrefs.getDeviceId(applicationContext),
+            deviceLabel = AppPrefs.getDeviceLabel(applicationContext)
+        )
         val src = File(payload.filePath)
         val failedMarker   = File(src.parentFile, "${src.nameWithoutExtension}.failed")
         val uploadedMarker = File(src.parentFile, "${src.nameWithoutExtension}.uploaded")

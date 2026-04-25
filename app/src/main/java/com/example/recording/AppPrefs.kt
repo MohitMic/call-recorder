@@ -16,6 +16,10 @@ object AppPrefs {
     // UI
     private const val KEY_NIGHT_MODE           = "night_mode"
 
+    // Device identity (so admin panel can segregate per phone)
+    private const val KEY_DEVICE_ID            = "device_id"
+    private const val KEY_DEVICE_LABEL         = "device_label"
+
     // ── Recording behaviour ───────────────────────────────────────────────────
 
     fun isDeleteAfterUpload(context: Context): Boolean =
@@ -58,6 +62,28 @@ object AppPrefs {
 
     fun setCustomFolder(context: Context, path: String) =
         prefs(context).edit().putString(KEY_CUSTOM_FOLDER, path.trim()).apply()
+
+    // ── Device identity ───────────────────────────────────────────────────────
+
+    /** Stable UUID for this install. Generated once and persisted. */
+    fun getDeviceId(context: Context): String {
+        val p = prefs(context)
+        var id = p.getString(KEY_DEVICE_ID, null)
+        if (id.isNullOrBlank()) {
+            id = java.util.UUID.randomUUID().toString()
+            p.edit().putString(KEY_DEVICE_ID, id).apply()
+        }
+        return id
+    }
+
+    /** Friendly label the user sets in Settings (e.g. "Mohit's Pixel"). */
+    fun getDeviceLabel(context: Context): String {
+        val v = prefs(context).getString(KEY_DEVICE_LABEL, "") ?: ""
+        return v.ifBlank { android.os.Build.MODEL ?: "Unknown device" }
+    }
+
+    fun setDeviceLabel(context: Context, label: String) =
+        prefs(context).edit().putString(KEY_DEVICE_LABEL, label.trim()).apply()
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 

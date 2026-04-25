@@ -237,8 +237,11 @@
     </div>
     <div class="controls">
       <input id="searchInput" type="text" placeholder="Search number or name…" />
+      <select id="deviceFilter">
+        <option value="ALL">All devices</option>
+      </select>
       <select id="dirFilter">
-        <option value="ALL">All</option>
+        <option value="ALL">All directions</option>
         <option value="INCOMING">Incoming</option>
         <option value="OUTGOING">Outgoing</option>
       </select>
@@ -306,6 +309,7 @@
   const statsEl   = document.getElementById("stats");
   const searchEl  = document.getElementById("searchInput");
   const dirEl     = document.getElementById("dirFilter");
+  const deviceEl  = document.getElementById("deviceFilter");
   const audioEl   = document.getElementById("audioEl");
   const playerBar = document.getElementById("playerBar");
   const playerTitle = document.getElementById("playerTitle");
@@ -331,7 +335,9 @@
       );
       if (!res.ok) throw new Error(`Supabase error: ${res.status} ${await res.text()}`);
       allRecordings = await res.json();
-      statsEl.textContent = `${allRecordings.length} recording${allRecordings.length === 1 ? "" : "s"}`;
+      populateDeviceFilter(allRecordings);
+      const devCount = new Set(allRecordings.map(r => r.device_id || "unknown")).size;
+      statsEl.textContent = `${allRecordings.length} recording${allRecordings.length === 1 ? "" : "s"} from ${devCount} device${devCount === 1 ? "" : "s"}`;
       render();
     } catch (e) {
       statusEl.style.display = "none";
@@ -340,14 +346,33 @@
     }
   }
 
+  function populateDeviceFilter(recs) {
+    const seen = new Map(); // id -> label
+    recs.forEach(r => {
+      const id = r.device_id || "unknown";
+      if (!seen.has(id)) seen.set(id, r.device_label || "Unknown device");
+    });
+    const prev = deviceEl.value;
+    deviceEl.innerHTML = '<option value="ALL">All devices</option>' +
+      Array.from(seen.entries())
+        .sort((a, b) => a[1].localeCompare(b[1]))
+        .map(([id, label]) => `<option value="${escapeHtml(id)}">${escapeHtml(label)}</option>`)
+        .join("");
+    if (prev && Array.from(deviceEl.options).some(o => o.value === prev)) {
+      deviceEl.value = prev;
+    }
+  }
+
   function render() {
     const q = searchEl.value.trim().toLowerCase();
     const dir = dirEl.value;
+    const dev = deviceEl.value;
 
     const filtered = allRecordings.filter((r) => {
       if (dir !== "ALL" && (r.direction || "").toUpperCase() !== dir) return false;
+      if (dev !== "ALL" && (r.device_id || "unknown") !== dev) return false;
       if (q) {
-        const hay = `${r.number || ""} ${r.file_name || ""}`.toLowerCase();
+        const hay = `${r.number || ""} ${r.file_name || ""} ${r.device_label || ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
@@ -411,7 +436,7 @@
             <span class="pill ${dirClass}">${dirLabel}</span>
             ${r.source_used ? `<span class="source-tag">${escapeHtml(r.source_used)}</span>` : ""}
           </div>
-          <div class="meta">${escapeHtml(date)} · ${dur}</div>
+          <div class="meta">${escapeHtml(date)} · ${dur}${r.device_label ? ` · 📱 ${escapeHtml(r.device_label)}` : ""}</div>
           <div class="meta" style="font-size:11px;opacity:0.7;">${escapeHtml(r.file_name || "")}</div>
         </div>
         <button class="play-btn" data-id="${r.id}" data-url="${escapeHtml(url)}" data-title="${safeTitle}" title="Play">▶</button>
@@ -432,6 +457,7 @@
   document.getElementById("refreshBtn").addEventListener("click", loadRecordings);
   searchEl.addEventListener("input", render);
   dirEl.addEventListener("change", render);
+  deviceEl.addEventListener("change", render);
 </script>
 </body>
 </html>

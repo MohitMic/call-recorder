@@ -22,7 +22,9 @@ data class UploadPayload(
     val direction: String,
     val timestampMillis: Long,
     val durationMillis: Long,
-    val sourceUsed: String
+    val sourceUsed: String,
+    val deviceId: String = "",
+    val deviceLabel: String = ""
 )
 
 data class ActiveCallSession(
