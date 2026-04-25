@@ -44,6 +44,32 @@ class NativeRecordingWatcher(private val context: Context) {
             if (dir.exists()) watching.add(path)
         }
         Log.i(TAG, "Watching ${watching.size} OEM folder(s): $watching")
+
+        // Sweep existing files: any audio file without a `.uploaded` marker
+        // gets enqueued. Handles the case where calls were recorded while the
+        // service was off, or before the user installed/configured the app.
+        Thread {
+            sweepExistingFiles(candidatePaths)
+        }.also { it.isDaemon = true }.start()
+    }
+
+    private fun sweepExistingFiles(paths: List<String>) {
+        var enqueued = 0
+        paths.forEach { path ->
+            val dir = File(path)
+            if (!dir.exists()) return@forEach
+            val files = dir.listFiles { f ->
+                f.isFile && isAudioFile(f.name)
+            } ?: return@forEach
+            files.forEach { file ->
+                val uploadedMark = File(file.parentFile, "${file.nameWithoutExtension}.uploaded")
+                if (uploadedMark.exists()) return@forEach
+                if (file.length() == 0L) return@forEach
+                enqueueUpload(file)
+                enqueued++
+            }
+        }
+        Log.i(TAG, "Sweep enqueued $enqueued pending file(s) for upload")
     }
 
     fun stop() {

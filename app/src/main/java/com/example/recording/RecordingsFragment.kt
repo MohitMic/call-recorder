@@ -172,7 +172,36 @@ class RecordingsFragment : Fragment(R.layout.fragment_recordings) {
                 recycler.visibility = View.VISIBLE
                 adapter.submitFull(result.items)
             }
+
+            // Enqueue uploads for any items that haven't been uploaded yet.
+            // This catches recordings made before the watcher was running, or
+            // from when the service was off. Idempotent — UploadWorker writes
+            // a `.uploaded` marker so already-uploaded files are skipped.
+            withContext(Dispatchers.IO) {
+                enqueuePendingUploads(result.items)
+            }
         }
+    }
+
+    private fun enqueuePendingUploads(items: List<RecordingItem>) {
+        items.forEach { item ->
+            if (item.uploadStatus == UploadStatus.UPLOADED) return@forEach
+            val file = item.file
+            if (!file.exists() || file.length() == 0L) return@forEach
+            val payload = com.example.recording.model.UploadPayload(
+                filePath        = file.absolutePath,
+                number          = item.report?.numberLabel ?: parsePhone(file.nameWithoutExtension) ?: "Unknown",
+                direction       = item.direction,
+                timestampMillis = item.report?.startedAtMillis ?: file.lastModified(),
+                durationMillis  = item.report?.durationMillis ?: 0L,
+                sourceUsed      = item.report?.audioSourceUsed ?: "OEM_NATIVE"
+            )
+            com.example.recording.upload.UploadWorker.enqueue(requireContext(), payload)
+        }
+    }
+
+    private fun parsePhone(name: String): String? {
+        return Regex("""(\+?\d{7,15})""").find(name)?.value
     }
 
     // ── Folder status banner ──────────────────────────────────────────────────
