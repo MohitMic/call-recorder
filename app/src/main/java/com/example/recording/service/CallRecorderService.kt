@@ -564,6 +564,7 @@ class CallRecorderService : Service() {
                 timestampMillis = session.startedAt,
                 durationMillis  = duration,
                 sourceUsed      = session.sourceUsed
+            )
         )
         activeSession = null
         pushLiveStatus()
