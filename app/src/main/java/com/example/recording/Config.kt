@@ -29,8 +29,8 @@ package com.example.recording
  */
 object Config {
     // ── Cloudinary (audio file storage) ──────────────────────────────────────
-    const val CLOUDINARY_CLOUD_NAME    = "YOUR_CLOUD_NAME"      // e.g. "dxxxx1234"
-    const val CLOUDINARY_UPLOAD_PRESET = "YOUR_UPLOAD_PRESET"   // unsigned preset name
+    const val CLOUDINARY_CLOUD_NAME    = "djrfmyimy"
+    const val CLOUDINARY_UPLOAD_PRESET = "Audiorecording"
 
     // ── Supabase (metadata DB only) ───────────────────────────────────────────
     const val SUPABASE_URL = "https://tahyfwvlnlufqkzknbcm.supabase.co"
