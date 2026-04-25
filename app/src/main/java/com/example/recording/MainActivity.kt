@@ -1,10 +1,9 @@
 package com.example.recording
 
 import android.os.Bundle
-import android.widget.CompoundButton
-import android.widget.Switch
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
 
@@ -13,68 +12,61 @@ class MainActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Apply night mode before inflating layout
-        applyNightMode()
+        // Always dark — no day/night toggle
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
 
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         drawerLayout = findViewById(R.id.drawerLayout)
 
-        // Default fragment on first create
+        // Default fragment on first create (no back stack entry — it's the root)
         if (savedInstanceState == null) {
-            loadFragment(RecordingsFragment(), TAG_RECORDINGS)
+            loadFragment(RecordingsFragment(), TAG_RECORDINGS, addToBackStack = false)
         }
 
         // Drawer items
         findViewById<android.view.View>(R.id.drawerItemRecordings).setOnClickListener {
-            loadFragment(RecordingsFragment(), TAG_RECORDINGS)
+            // Pop everything back to root then show recordings
+            supportFragmentManager.popBackStack(null,
+                androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE)
+            loadFragment(RecordingsFragment(), TAG_RECORDINGS, addToBackStack = false)
             drawerLayout.closeDrawers()
         }
 
         findViewById<android.view.View>(R.id.drawerItemDashboard).setOnClickListener {
-            loadFragment(DashboardFragment(), TAG_DASHBOARD)
+            loadFragment(DashboardFragment(), TAG_DASHBOARD, addToBackStack = true)
             drawerLayout.closeDrawers()
         }
 
         findViewById<android.view.View>(R.id.drawerItemSettings).setOnClickListener {
-            loadFragment(SettingsFragment(), TAG_SETTINGS)
+            loadFragment(SettingsFragment(), TAG_SETTINGS, addToBackStack = true)
             drawerLayout.closeDrawers()
         }
+    }
 
-        // Night mode toggle in drawer footer
-        val switchNightMode = findViewById<Switch>(R.id.switchNightMode)
-        switchNightMode.isChecked = AppPrefs.isNightMode(this)
-        switchNightMode.setOnCheckedChangeListener { _: CompoundButton, checked: Boolean ->
-            AppPrefs.setNightMode(this, checked)
-            AppCompatDelegate.setDefaultNightMode(
-                if (checked) AppCompatDelegate.MODE_NIGHT_YES
-                else         AppCompatDelegate.MODE_NIGHT_NO
-            )
-            recreate()
+    /** Handle back: close drawer first, then pop fragment stack, then exit. */
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        when {
+            drawerLayout.isDrawerOpen(GravityCompat.START) ->
+                drawerLayout.closeDrawer(GravityCompat.START)
+            supportFragmentManager.backStackEntryCount > 0 ->
+                supportFragmentManager.popBackStack()
+            else -> super.onBackPressed()
         }
     }
 
-    /** Opens the navigation drawer from any fragment. */
-    fun openDrawer() = drawerLayout.openDrawer(
-        androidx.core.view.GravityCompat.START
-    )
+    /** Opens the navigation drawer — called from fragment hamburger buttons. */
+    fun openDrawer() = drawerLayout.openDrawer(GravityCompat.START)
 
-    private fun loadFragment(fragment: Fragment, tag: String) {
+    private fun loadFragment(fragment: Fragment, tag: String, addToBackStack: Boolean) {
         val existing = supportFragmentManager.findFragmentByTag(tag)
         if (existing != null && existing.isVisible) return
-        supportFragmentManager.beginTransaction()
+        val tx = supportFragmentManager.beginTransaction()
             .replace(R.id.fragmentContainer, fragment, tag)
-            .commit()
-    }
-
-    private fun applyNightMode() {
-        val nightMode = if (AppPrefs.isNightMode(this)) {
-            AppCompatDelegate.MODE_NIGHT_YES
-        } else {
-            AppCompatDelegate.MODE_NIGHT_NO
-        }
-        AppCompatDelegate.setDefaultNightMode(nightMode)
+        if (addToBackStack) tx.addToBackStack(tag)
+        tx.commit()
     }
 
     companion object {

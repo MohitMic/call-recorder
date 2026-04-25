@@ -71,6 +71,11 @@ class DashboardFragment : Fragment(R.layout.fragment_dashboard) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Hamburger opens the nav drawer
+        view.findViewById<View>(R.id.btnMenu).setOnClickListener {
+            (activity as? MainActivity)?.openDrawer()
+        }
+
         switchService        = view.findViewById(R.id.switchService)
         textServiceSubtitle  = view.findViewById(R.id.textServiceSubtitle)
         cardLiveCall         = view.findViewById(R.id.cardLiveCall)

@@ -1,232 +1,272 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/dark_bg">
 
+    <!-- Top bar with hamburger -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:background="@color/dark_card">
+
+        <ImageView
+            android:id="@+id/btnMenu"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:padding="8dp"
+            android:src="@drawable/ic_menu"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Open menu" />
 
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="@string/app_name"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:paddingBottom="16dp" />
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:text="@string/nav_dashboard"
+            android:textColor="@color/text_primary_dark"
+            android:textSize="20sp"
+            android:textStyle="bold" />
 
-        <!-- Service card -->
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
         <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:padding="16dp"
-            android:background="#FFFFFF"
-            android:layout_marginBottom="12dp">
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/service_card_title"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/textServiceSubtitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/service_card_subtitle_off"
-                    android:textSize="13sp" />
-
-            </LinearLayout>
-
-            <Switch
-                android:id="@+id/switchService"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
-
-        </LinearLayout>
-
-        <!-- Live call card -->
-        <LinearLayout
-            android:id="@+id/cardLiveCall"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp"
-            android:background="#1A237E"
-            android:layout_marginBottom="12dp"
-            android:visibility="gone">
+            android:padding="16dp">
 
+            <!-- Service card -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:gravity="center_vertical">
+                android:gravity="center_vertical"
+                android:padding="16dp"
+                android:background="@color/dark_card"
+                android:layout_marginBottom="12dp">
 
-                <View
-                    android:id="@+id/dotLive"
-                    android:layout_width="10dp"
-                    android:layout_height="10dp"
-                    android:background="#FFEB3B"
-                    android:layout_marginEnd="8dp" />
-
-                <TextView
+                <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="@string/live_card_recording"
-                    android:textSize="13sp"
-                    android:textStyle="bold"
-                    android:textColor="#FFEB3B" />
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/service_card_title"
+                        android:textColor="@color/text_primary_dark"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/textServiceSubtitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/service_card_subtitle_off"
+                        android:textColor="@color/text_secondary_dark"
+                        android:textSize="13sp" />
+
+                </LinearLayout>
+
+                <Switch
+                    android:id="@+id/switchService"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+
+            </LinearLayout>
+
+            <!-- Live call card -->
+            <LinearLayout
+                android:id="@+id/cardLiveCall"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:background="#1A237E"
+                android:layout_marginBottom="12dp"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <View
+                        android:id="@+id/dotLive"
+                        android:layout_width="10dp"
+                        android:layout_height="10dp"
+                        android:background="#FFEB3B"
+                        android:layout_marginEnd="8dp" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/live_card_recording"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:textColor="#FFEB3B" />
+
+                    <TextView
+                        android:id="@+id/textLiveDuration"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0:00"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:textColor="#FFFFFF" />
+
+                </LinearLayout>
 
                 <TextView
-                    android:id="@+id/textLiveDuration"
+                    android:id="@+id/textLiveNumber"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="0:00"
-                    android:textSize="14sp"
+                    android:layout_marginTop="10dp"
+                    android:text="Unknown"
+                    android:textSize="20sp"
                     android:textStyle="bold"
+                    android:textColor="#FFFFFF" />
+
+                <TextView
+                    android:id="@+id/textLiveSource"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textSize="13sp"
+                    android:textColor="#B3FFFFFF" />
+
+                <TextView
+                    android:id="@+id/textLiveHealthBanner"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:padding="10dp"
+                    android:textSize="12sp"
                     android:textColor="#FFFFFF" />
 
             </LinearLayout>
 
-            <TextView
-                android:id="@+id/textLiveNumber"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:text="Unknown"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                android:textColor="#FFFFFF" />
-
-            <TextView
-                android:id="@+id/textLiveSource"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:textSize="13sp"
-                android:textColor="#B3FFFFFF" />
-
-            <TextView
-                android:id="@+id/textLiveHealthBanner"
+            <!-- Checklist card -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:padding="10dp"
-                android:textSize="12sp"
-                android:textColor="#FFFFFF" />
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:background="@color/dark_card"
+                android:layout_marginBottom="12dp">
 
-        </LinearLayout>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:text="@string/checklist_title"
+                    android:textColor="@color/text_primary_dark"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
 
-        <!-- Checklist card -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp"
-            android:background="#FFFFFF"
-            android:layout_marginBottom="12dp">
+                <!-- Microphone -->
+                <LinearLayout android:id="@+id/rowMic"
+                    android:layout_width="match_parent" android:layout_height="48dp"
+                    android:orientation="horizontal" android:gravity="center_vertical">
+                    <View android:id="@+id/dotMic"
+                        android:layout_width="12dp" android:layout_height="12dp"
+                        android:background="#9E9E9E" android:layout_marginEnd="14dp"/>
+                    <TextView android:id="@+id/textMic"
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:text="@string/perm_mic"
+                        android:textColor="@color/text_primary_dark" android:textSize="14sp"/>
+                    <Button android:id="@+id/btnMic"
+                        android:layout_width="wrap_content" android:layout_height="36dp"
+                        android:text="@string/btn_grant" android:textSize="12sp"
+                        android:visibility="gone"/>
+                </LinearLayout>
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:text="@string/checklist_title"
-                android:textSize="15sp"
-                android:textStyle="bold" />
+                <!-- Phone State -->
+                <LinearLayout android:id="@+id/rowPhoneState"
+                    android:layout_width="match_parent" android:layout_height="48dp"
+                    android:orientation="horizontal" android:gravity="center_vertical">
+                    <View android:id="@+id/dotPhoneState"
+                        android:layout_width="12dp" android:layout_height="12dp"
+                        android:background="#9E9E9E" android:layout_marginEnd="14dp"/>
+                    <TextView android:id="@+id/textPhoneState"
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:text="@string/perm_phone_state"
+                        android:textColor="@color/text_primary_dark" android:textSize="14sp"/>
+                    <Button android:id="@+id/btnPhoneState"
+                        android:layout_width="wrap_content" android:layout_height="36dp"
+                        android:text="@string/btn_grant" android:textSize="12sp"
+                        android:visibility="gone"/>
+                </LinearLayout>
 
-            <!-- Microphone -->
-            <LinearLayout android:id="@+id/rowMic"
-                android:layout_width="match_parent" android:layout_height="48dp"
-                android:orientation="horizontal" android:gravity="center_vertical">
-                <View android:id="@+id/dotMic"
-                    android:layout_width="12dp" android:layout_height="12dp"
-                    android:background="#CCCCCC" android:layout_marginEnd="14dp"/>
-                <TextView android:id="@+id/textMic"
-                    android:layout_width="0dp" android:layout_height="wrap_content"
-                    android:layout_weight="1" android:text="@string/perm_mic" android:textSize="14sp"/>
-                <Button android:id="@+id/btnMic"
-                    android:layout_width="wrap_content" android:layout_height="36dp"
-                    android:text="@string/btn_grant" android:textSize="12sp"
-                    android:visibility="gone"/>
-            </LinearLayout>
+                <!-- Notifications -->
+                <LinearLayout android:id="@+id/rowNotifications"
+                    android:layout_width="match_parent" android:layout_height="48dp"
+                    android:orientation="horizontal" android:gravity="center_vertical">
+                    <View android:id="@+id/dotNotifications"
+                        android:layout_width="12dp" android:layout_height="12dp"
+                        android:background="#9E9E9E" android:layout_marginEnd="14dp"/>
+                    <TextView android:id="@+id/textNotifications"
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:text="@string/perm_notifications"
+                        android:textColor="@color/text_primary_dark" android:textSize="14sp"/>
+                    <Button android:id="@+id/btnNotifications"
+                        android:layout_width="wrap_content" android:layout_height="36dp"
+                        android:text="@string/btn_grant" android:textSize="12sp"
+                        android:visibility="gone"/>
+                </LinearLayout>
 
-            <!-- Phone State -->
-            <LinearLayout android:id="@+id/rowPhoneState"
-                android:layout_width="match_parent" android:layout_height="48dp"
-                android:orientation="horizontal" android:gravity="center_vertical">
-                <View android:id="@+id/dotPhoneState"
-                    android:layout_width="12dp" android:layout_height="12dp"
-                    android:background="#CCCCCC" android:layout_marginEnd="14dp"/>
-                <TextView android:id="@+id/textPhoneState"
-                    android:layout_width="0dp" android:layout_height="wrap_content"
-                    android:layout_weight="1" android:text="@string/perm_phone_state" android:textSize="14sp"/>
-                <Button android:id="@+id/btnPhoneState"
-                    android:layout_width="wrap_content" android:layout_height="36dp"
-                    android:text="@string/btn_grant" android:textSize="12sp"
-                    android:visibility="gone"/>
-            </LinearLayout>
+                <!-- Accessibility -->
+                <LinearLayout android:id="@+id/rowAccessibility"
+                    android:layout_width="match_parent" android:layout_height="48dp"
+                    android:orientation="horizontal" android:gravity="center_vertical">
+                    <View android:id="@+id/dotAccessibility"
+                        android:layout_width="12dp" android:layout_height="12dp"
+                        android:background="#9E9E9E" android:layout_marginEnd="14dp"/>
+                    <TextView android:id="@+id/textAccessibility"
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:text="@string/perm_accessibility"
+                        android:textColor="@color/text_primary_dark" android:textSize="14sp"/>
+                    <Button android:id="@+id/btnAccessibility"
+                        android:layout_width="wrap_content" android:layout_height="36dp"
+                        android:text="@string/btn_enable" android:textSize="12sp"
+                        android:visibility="gone"/>
+                </LinearLayout>
 
-            <!-- Notifications -->
-            <LinearLayout android:id="@+id/rowNotifications"
-                android:layout_width="match_parent" android:layout_height="48dp"
-                android:orientation="horizontal" android:gravity="center_vertical">
-                <View android:id="@+id/dotNotifications"
-                    android:layout_width="12dp" android:layout_height="12dp"
-                    android:background="#CCCCCC" android:layout_marginEnd="14dp"/>
-                <TextView android:id="@+id/textNotifications"
-                    android:layout_width="0dp" android:layout_height="wrap_content"
-                    android:layout_weight="1" android:text="@string/perm_notifications" android:textSize="14sp"/>
-                <Button android:id="@+id/btnNotifications"
-                    android:layout_width="wrap_content" android:layout_height="36dp"
-                    android:text="@string/btn_grant" android:textSize="12sp"
-                    android:visibility="gone"/>
-            </LinearLayout>
+                <!-- Dual Channel -->
+                <LinearLayout android:id="@+id/rowDualChannel"
+                    android:layout_width="match_parent" android:layout_height="48dp"
+                    android:orientation="horizontal" android:gravity="center_vertical">
+                    <View android:id="@+id/dotDualChannel"
+                        android:layout_width="12dp" android:layout_height="12dp"
+                        android:background="#9E9E9E" android:layout_marginEnd="14dp"/>
+                    <TextView android:id="@+id/textDualChannel"
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:text="@string/perm_dual_channel"
+                        android:textColor="@color/text_primary_dark" android:textSize="14sp"/>
+                    <Button android:id="@+id/btnDualChannel"
+                        android:layout_width="wrap_content" android:layout_height="36dp"
+                        android:text="@string/btn_grant" android:textSize="12sp"
+                        android:visibility="gone"/>
+                </LinearLayout>
 
-            <!-- Accessibility -->
-            <LinearLayout android:id="@+id/rowAccessibility"
-                android:layout_width="match_parent" android:layout_height="48dp"
-                android:orientation="horizontal" android:gravity="center_vertical">
-                <View android:id="@+id/dotAccessibility"
-                    android:layout_width="12dp" android:layout_height="12dp"
-                    android:background="#CCCCCC" android:layout_marginEnd="14dp"/>
-                <TextView android:id="@+id/textAccessibility"
-                    android:layout_width="0dp" android:layout_height="wrap_content"
-                    android:layout_weight="1" android:text="@string/perm_accessibility" android:textSize="14sp"/>
-                <Button android:id="@+id/btnAccessibility"
-                    android:layout_width="wrap_content" android:layout_height="36dp"
-                    android:text="@string/btn_enable" android:textSize="12sp"
-                    android:visibility="gone"/>
-            </LinearLayout>
-
-            <!-- Dual Channel -->
-            <LinearLayout android:id="@+id/rowDualChannel"
-                android:layout_width="match_parent" android:layout_height="48dp"
-                android:orientation="horizontal" android:gravity="center_vertical">
-                <View android:id="@+id/dotDualChannel"
-                    android:layout_width="12dp" android:layout_height="12dp"
-                    android:background="#CCCCCC" android:layout_marginEnd="14dp"/>
-                <TextView android:id="@+id/textDualChannel"
-                    android:layout_width="0dp" android:layout_height="wrap_content"
-                    android:layout_weight="1" android:text="@string/perm_dual_channel" android:textSize="14sp"/>
-                <Button android:id="@+id/btnDualChannel"
-                    android:layout_width="wrap_content" android:layout_height="36dp"
-                    android:text="@string/btn_grant" android:textSize="12sp"
-                    android:visibility="gone"/>
             </LinearLayout>
 
         </LinearLayout>
+    </ScrollView>
 
-    </LinearLayout>
-</ScrollView>
+</LinearLayout>

@@ -27,6 +27,11 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Hamburger opens the nav drawer
+        view.findViewById<View>(R.id.btnMenu).setOnClickListener {
+            (activity as? MainActivity)?.openDrawer()
+        }
+
         spinnerBrand       = view.findViewById(R.id.spinnerDeviceBrand)
         layoutCustomFolder = view.findViewById(R.id.layoutCustomFolder)
         editCustomFolder   = view.findViewById(R.id.editCustomFolder)
