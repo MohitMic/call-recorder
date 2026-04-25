@@ -1,8 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Recording" parent="Theme.AppCompat.Light.NoActionBar">
-        <item name="colorPrimary">#1A237E</item>
-        <item name="colorPrimaryDark">#0D1455</item>
-        <item name="colorAccent">#00695C</item>
+
+    <style name="Theme.Recording" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/pink</item>
+        <item name="colorPrimaryDark">@color/pink_dark</item>
+        <item name="colorAccent">@color/pink</item>
+        <item name="colorSurface">@color/dark_card</item>
+        <item name="android:windowBackground">@color/dark_bg</item>
+        <item name="android:statusBarColor">@color/dark_bg</item>
+        <item name="android:navigationBarColor">@color/dark_bg</item>
+        <item name="android:textColorPrimary">@color/text_primary_dark</item>
+        <item name="android:textColorSecondary">@color/text_secondary_dark</item>
     </style>
+
+    <!-- Pink gradient button -->
+    <style name="Widget.Recording.Button.Pink" parent="Widget.MaterialComponents.Button">
+        <item name="backgroundTint">@color/pink</item>
+        <item name="android:textColor">@color/text_primary_dark</item>
+    </style>
+
+    <!-- Flat text button -->
+    <style name="Widget.Recording.Button.Text" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="android:textColor">@color/pink</item>
+    </style>
+
 </resources>

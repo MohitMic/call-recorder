@@ -95,4 +95,19 @@
     <string name="request_permissions">Request Permissions</string>
     <string name="open_accessibility_settings">Enable Accessibility Service</string>
     <string name="start_recording_service">Start Recording Service</string>
+
+    <!-- Drawer -->
+    <string name="drawer_subtitle">Automatic call recorder</string>
+    <string name="drawer_night_mode">Night mode</string>
+    <string name="nav_dashboard">Setup</string>
+
+    <!-- Upload status labels -->
+    <string name="upload_status_ok">Uploaded ✓</string>
+    <string name="upload_status_pending">Upload pending</string>
+    <string name="upload_status_failed">Upload failed — retrying</string>
+
+    <!-- Direction labels -->
+    <string name="direction_pill_incoming">INCOMING</string>
+    <string name="direction_pill_outgoing">OUTGOING</string>
+    <string name="direction_pill_unknown">UNKNOWN</string>
 </resources>

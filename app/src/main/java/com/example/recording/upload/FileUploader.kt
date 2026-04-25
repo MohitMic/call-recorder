@@ -1,8 +1,10 @@
 package com.example.recording.upload
 
 import android.util.Log
+import com.example.recording.Config
 import com.example.recording.model.UploadPayload
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
@@ -15,74 +17,70 @@ import java.util.Locale
 import java.util.TimeZone
 
 /**
- * Uploads a call recording to Supabase Storage and inserts a metadata row
- * into the `recordings` PostgREST table.
+ * Uploads a call recording to Cloudinary (audio storage) and inserts a
+ * metadata row into the Supabase `recordings` table.
  *
- * Required Supabase setup (run once in the SQL editor):
- * ─────────────────────────────────────────────────────
- *   -- Storage bucket (or create via Dashboard → Storage → New bucket)
- *   insert into storage.buckets (id, name, public)
- *   values ('call-recordings', 'call-recordings', false);
+ * Cloudinary — unsigned upload
+ * ─────────────────────────────
+ *   POST https://api.cloudinary.com/v1_1/{cloud_name}/video/upload
+ *   Body: multipart/form-data
+ *     file          – the audio file
+ *     upload_preset – name of an unsigned upload preset
  *
- *   -- Metadata table
- *   create table recordings (
- *     id            uuid primary key default gen_random_uuid(),
- *     file_name     text not null,
- *     storage_path  text not null,
- *     number        text,
- *     direction     text,
- *     recorded_at   timestamptz,
- *     duration_ms   bigint,
- *     source_used   text,
- *     created_at    timestamptz default now()
+ *   Audio files (amr, m4a, aac, etc.) must use resource_type=video in
+ *   Cloudinary's terminology — the /video/upload endpoint accepts all
+ *   non-image media types.
+ *
+ * Supabase metadata table (run once in SQL editor):
+ * ──────────────────────────────────────────────────
+ *   create table if not exists recordings (
+ *     id             uuid primary key default gen_random_uuid(),
+ *     file_name      text not null,
+ *     cloudinary_url text,
+ *     number         text,
+ *     direction      text,
+ *     recorded_at    timestamptz,
+ *     duration_ms    bigint,
+ *     source_used    text,
+ *     created_at     timestamptz default now()
  *   );
- *
- *   -- Allow anon key to insert (RLS)
  *   alter table recordings enable row level security;
  *   create policy "insert_anon" on recordings for insert to anon with check (true);
- *
- *   -- Allow anon key to upload to the bucket (Storage policy via Dashboard or SQL)
- *   -- Dashboard → Storage → call-recordings → Policies → New policy → allow INSERT for anon
- * ─────────────────────────────────────────────────────
  */
 class FileUploader(
-    private val supabaseUrl: String,
-    private val supabaseKey: String,
-    private val bucketName: String = "call-recordings",
     private val client: OkHttpClient = OkHttpClient()
 ) {
 
     /**
-     * Returns true when both the storage upload and the metadata insert succeed.
-     * The caller should retry on false (WorkManager handles exponential backoff).
+     * Returns true when both the Cloudinary upload and the Supabase metadata
+     * insert succeed.  The caller should retry on false.
      */
     fun upload(payload: UploadPayload): Boolean {
-        if (supabaseUrl.isBlank() || supabaseKey.isBlank()) {
-            Log.w(TAG, "Supabase URL or key not configured — skipping upload")
-            // Return true so WorkManager doesn't retry forever with bad config
-            return true
-        }
         val file = File(payload.filePath)
         if (!file.exists()) {
             Log.w(TAG, "File not found: ${payload.filePath}")
-            return true  // nothing to upload, don't retry
+            return true   // nothing to upload — don't retry forever
         }
 
-        val storagePath = file.name   // e.g. "INCOMING__12345_20240101_123456.mp4"
-
-        // Storage upload is the critical step — marker written on success.
-        // Metadata insert is best-effort; failure does not block the upload status.
-        val stored = uploadToStorage(file, storagePath)
-        if (stored) {
-            runCatching { insertMetadata(payload, storagePath) }
-                .onFailure { Log.w(TAG, "Metadata insert skipped: ${it.message}") }
+        if (Config.CLOUDINARY_CLOUD_NAME == "YOUR_CLOUD_NAME") {
+            Log.w(TAG, "Cloudinary not configured — skipping upload")
+            return true   // treat as success so we don't queue retries with bad config
         }
-        return stored
+
+        val cloudinaryUrl = uploadToCloudinary(file)
+        if (cloudinaryUrl != null) {
+            runCatching { insertMetadata(payload, cloudinaryUrl) }
+                .onFailure { Log.w(TAG, "Supabase metadata insert skipped: ${it.message}") }
+            return true
+        }
+        return false
     }
 
-    // PUT /storage/v1/object/{bucket}/{storagePath}
-    private fun uploadToStorage(file: File, storagePath: String): Boolean {
-        val url = "${supabaseUrl.trimEnd('/')}/storage/v1/object/$bucketName/$storagePath"
+    // ── Cloudinary multipart upload ───────────────────────────────────────────
+
+    private fun uploadToCloudinary(file: File): String? {
+        val url = "https://api.cloudinary.com/v1_1/${Config.CLOUDINARY_CLOUD_NAME}/video/upload"
+
         val mime = when (file.extension.lowercase()) {
             "mp3"  -> "audio/mpeg"
             "m4a"  -> "audio/mp4"
@@ -93,54 +91,70 @@ class FileUploader(
             "3gp"  -> "audio/3gpp"
             else   -> "audio/mp4"
         }
-        val body = file.asRequestBody(mime.toMediaTypeOrNull())
+
+        val fileBody  = file.asRequestBody(mime.toMediaTypeOrNull())
+        val multipart = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("file", file.name, fileBody)
+            .addFormDataPart("upload_preset", Config.CLOUDINARY_UPLOAD_PRESET)
+            .addFormDataPart("public_id", "call_recordings/${file.nameWithoutExtension}")
+            .build()
+
         val request = Request.Builder()
             .url(url)
-            .addHeader("Authorization", "Bearer $supabaseKey")
-            .addHeader("apikey", supabaseKey)
-            .addHeader("x-upsert", "true")   // overwrite on retry
-            .put(body)
+            .post(multipart)
             .build()
 
         return client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
-                Log.w(TAG, "Storage upload failed: ${response.code} ${response.message}")
+                Log.w(TAG, "Cloudinary upload failed: ${response.code} ${response.message}")
+                return@use null
             }
-            response.isSuccessful
+            val body = response.body?.string() ?: return@use null
+            runCatching {
+                JSONObject(body).getString("secure_url")
+            }.getOrElse {
+                Log.w(TAG, "Could not parse Cloudinary secure_url from response")
+                null
+            }
         }
     }
 
-    // POST /rest/v1/recordings
-    private fun insertMetadata(payload: UploadPayload, storagePath: String): Boolean {
-        val url = "${supabaseUrl.trimEnd('/')}/rest/v1/recordings"
+    // ── Supabase metadata insert ──────────────────────────────────────────────
 
-        val isoDate = iso8601(payload.timestampMillis)
+    private fun insertMetadata(payload: UploadPayload, cloudinaryUrl: String): Boolean {
+        if (Config.SUPABASE_URL.isBlank() || Config.SUPABASE_KEY.isBlank()) return false
+
+        val url = "${Config.SUPABASE_URL.trimEnd('/')}/rest/v1/recordings"
+
         val json = JSONObject().apply {
-            put("file_name", File(payload.filePath).name)
-            put("storage_path", storagePath)
-            put("number", payload.number.ifBlank { null })
-            put("direction", payload.direction)
-            put("recorded_at", isoDate)
-            put("duration_ms", payload.durationMillis)
-            put("source_used", payload.sourceUsed)
+            put("file_name",      File(payload.filePath).name)
+            put("cloudinary_url", cloudinaryUrl)
+            put("number",         payload.number.ifBlank { null })
+            put("direction",      payload.direction)
+            put("recorded_at",    iso8601(payload.timestampMillis))
+            put("duration_ms",    payload.durationMillis)
+            put("source_used",    payload.sourceUsed)
         }.toString()
 
-        val body = json.toRequestBody("application/json".toMediaTypeOrNull())
+        val body    = json.toRequestBody("application/json".toMediaTypeOrNull())
         val request = Request.Builder()
             .url(url)
-            .addHeader("Authorization", "Bearer $supabaseKey")
-            .addHeader("apikey", supabaseKey)
-            .addHeader("Prefer", "return=minimal")
+            .addHeader("Authorization", "Bearer ${Config.SUPABASE_KEY}")
+            .addHeader("apikey",        Config.SUPABASE_KEY)
+            .addHeader("Prefer",        "return=minimal")
             .post(body)
             .build()
 
         return client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
-                Log.w(TAG, "Metadata insert failed: ${response.code} ${response.message}")
+                Log.w(TAG, "Supabase insert failed: ${response.code} ${response.message}")
             }
             response.isSuccessful
         }
     }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private fun iso8601(epochMillis: Long): String {
         val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)

@@ -10,7 +10,6 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.example.recording.AppPrefs
-import com.example.recording.Config
 import com.example.recording.model.UploadPayload
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -31,11 +30,7 @@ class UploadWorker(
         val failedMarker   = File(src.parentFile, "${src.nameWithoutExtension}.failed")
         val uploadedMarker = File(src.parentFile, "${src.nameWithoutExtension}.uploaded")
 
-        val uploader = FileUploader(
-            supabaseUrl = Config.SUPABASE_URL,
-            supabaseKey = Config.SUPABASE_KEY,
-            bucketName  = Config.STORAGE_BUCKET
-        )
+        val uploader = FileUploader()
         val success = runCatching { uploader.upload(payload) }.getOrDefault(false)
 
         return if (success) {

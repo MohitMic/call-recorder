@@ -1,48 +1,81 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Brand palette -->
-    <color name="colorPrimary">#1A237E</color>
-    <color name="colorPrimaryDark">#0D1455</color>
-    <color name="colorPrimaryLight">#3F51B5</color>
-    <color name="colorOnPrimary">#FFFFFF</color>
-    <color name="colorSecondary">#00695C</color>
-    <color name="colorOnSecondary">#FFFFFF</color>
+    <!-- Brand -->
+    <color name="pink">#E91E8C</color>
+    <color name="purple">#7B2FBE</color>
+    <color name="pink_dark">#C2185B</color>
 
-    <!-- Surfaces -->
-    <color name="colorBackground">#EEF0FF</color>
+    <!-- Dark theme surfaces -->
+    <color name="dark_bg">#12121C</color>
+    <color name="dark_card">#1E1E2E</color>
+    <color name="dark_card_elevated">#252538</color>
+    <color name="dark_divider">#2A2A3E</color>
+
+    <!-- Light theme surfaces -->
+    <color name="light_bg">#F4F4FA</color>
+    <color name="light_card">#FFFFFF</color>
+    <color name="light_divider">#E0E0EC</color>
+
+    <!-- Text -->
+    <color name="text_primary_dark">#FFFFFF</color>
+    <color name="text_secondary_dark">#9E9E9E</color>
+    <color name="text_primary_light">#12121C</color>
+    <color name="text_secondary_light">#5F5F7A</color>
+
+    <!-- Semantic -->
+    <color name="colorBackground">#F4F4FA</color>
     <color name="colorSurface">#FFFFFF</color>
-    <color name="colorOnSurface">#1C1B1F</color>
-    <color name="colorOnSurfaceSecondary">#5F6368</color>
-    <color name="colorDivider">#E0E0E0</color>
+    <color name="colorOnSurface">#12121C</color>
+    <color name="colorOnSurfaceSecondary">#5F5F7A</color>
+    <color name="colorPrimary">#E91E8C</color>
+    <color name="colorPrimaryDark">#C2185B</color>
+    <color name="colorPrimaryLight">#F06292</color>
+    <color name="colorOnPrimary">#FFFFFF</color>
+    <color name="colorAccent">#E91E8C</color>
+    <color name="colorDivider">#E0E0EC</color>
+    <color name="colorError">#CF6679</color>
 
-    <!-- Error -->
-    <color name="colorError">#C62828</color>
+    <!-- Upload status -->
+    <color name="upload_ok">#4CAF50</color>
+    <color name="upload_pending">#FF9800</color>
+    <color name="upload_failed">#EF5350</color>
 
-    <!-- Health status colours -->
-    <color name="health_good">#2E7D32</color>
-    <color name="health_good_bg">#E8F5E9</color>
-    <color name="health_partial">#E65100</color>
-    <color name="health_partial_bg">#FFF3E0</color>
-    <color name="health_risk">#B71C1C</color>
-    <color name="health_risk_bg">#FFEBEE</color>
-    <color name="health_unknown">#546E7A</color>
-    <color name="health_unknown_bg">#ECEFF1</color>
+    <!-- Health badges -->
+    <color name="health_good">#4CAF50</color>
+    <color name="health_good_bg">#1B2E1C</color>
+    <color name="health_partial">#FF9800</color>
+    <color name="health_partial_bg">#2E2210</color>
+    <color name="health_risk">#EF5350</color>
+    <color name="health_risk_bg">#2E1212</color>
+    <color name="health_unknown">#9E9E9E</color>
+    <color name="health_unknown_bg">#2A2A3E</color>
 
-    <!-- Live banner (kept for CallRecorderService compat) -->
-    <color name="live_banner_ok">#E8F5E9</color>
-    <color name="live_banner_risk">#FFEBEE</color>
-    <color name="live_banner_neutral">#E3F2FD</color>
+    <!-- Source badges -->
+    <color name="badge_dual">#82B1FF</color>
+    <color name="badge_dual_bg">#1A237E</color>
+    <color name="badge_voice">#CE93D8</color>
+    <color name="badge_voice_bg">#4A148C</color>
+    <color name="badge_mic">#FFCC80</color>
+    <color name="badge_mic_bg">#3E2723</color>
 
-    <!-- Source badge -->
-    <color name="badge_dual">#1565C0</color>
-    <color name="badge_dual_bg">#E3F2FD</color>
-    <color name="badge_voice">#6A1B9A</color>
-    <color name="badge_voice_bg">#F3E5F5</color>
-    <color name="badge_mic">#4E342E</color>
-    <color name="badge_mic_bg">#EFEBE9</color>
+    <!-- Direction -->
+    <color name="incoming_color">#4CAF50</color>
+    <color name="outgoing_color">#E91E8C</color>
 
-    <!-- Permission check / cross -->
-    <color name="perm_granted">#2E7D32</color>
-    <color name="perm_denied">#C62828</color>
-    <color name="perm_warning">#F57F17</color>
+    <!-- Live banner -->
+    <color name="live_banner_ok">#1B2E1C</color>
+    <color name="live_banner_risk">#2E1212</color>
+    <color name="live_banner_neutral">#1A1A2E</color>
+
+    <!-- Permission -->
+    <color name="perm_granted">#4CAF50</color>
+    <color name="perm_denied">#EF5350</color>
+    <color name="perm_warning">#FF9800</color>
+
+    <!-- Avatar backgrounds (cycle through these) -->
+    <color name="avatar_1">#E91E8C</color>
+    <color name="avatar_2">#7B2FBE</color>
+    <color name="avatar_3">#1565C0</color>
+    <color name="avatar_4">#00695C</color>
+    <color name="avatar_5">#E65100</color>
 </resources>

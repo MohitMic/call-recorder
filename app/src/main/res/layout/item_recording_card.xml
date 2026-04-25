@@ -3,106 +3,61 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:padding="12dp"
+    android:padding="14dp"
     android:gravity="center_vertical"
-    android:background="#FFFFFF"
-    android:layout_marginStart="8dp"
-    android:layout_marginEnd="8dp"
-    android:layout_marginTop="4dp"
-    android:layout_marginBottom="4dp">
+    android:background="@color/dark_card"
+    android:layout_marginStart="12dp"
+    android:layout_marginEnd="12dp"
+    android:layout_marginTop="6dp"
+    android:layout_marginBottom="0dp">
 
+    <!-- Circular avatar with initials -->
     <FrameLayout
-        android:id="@+id/iconContainer"
+        android:id="@+id/avatarContainer"
         android:layout_width="48dp"
         android:layout_height="48dp"
-        android:layout_marginEnd="12dp">
+        android:layout_marginEnd="14dp">
 
-        <ImageView
-            android:id="@+id/iconDirection"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_gravity="center"
-            android:src="@drawable/ic_call_incoming"
-            android:contentDescription="Call direction" />
+        <TextView
+            android:id="@+id/textAvatarInitials"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF"
+            android:background="@drawable/bg_circle_pink" />
 
     </FrameLayout>
 
+    <!-- Middle column: name, direction, duration+date, upload status -->
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:orientation="vertical">
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:id="@+id/textNumber"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:textSize="15sp"
-                android:textStyle="bold"
-                android:ellipsize="end"
-                android:singleLine="true" />
-
-            <TextView
-                android:id="@+id/textHealthBadge"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp"
-                android:paddingTop="3dp"
-                android:paddingBottom="3dp"
-                android:textSize="10sp"
-                android:textStyle="bold"
-                android:text="@string/health_unknown" />
-
-        </LinearLayout>
-
-        <TextView
-            android:id="@+id/textDate"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:textSize="12sp" />
-
-        <TextView
-            android:id="@+id/textCallInfo"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:textSize="12sp" />
-
-        <TextView
-            android:id="@+id/textDevice"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:textSize="11sp"
-            android:textColor="#757575" />
-
-        <TextView
-            android:id="@+id/textUploadStatus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:textSize="11sp"
-            android:textStyle="bold" />
-
+        <!-- Caller name row -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginTop="8dp">
+            android:layout_marginBottom="4dp">
 
             <TextView
-                android:id="@+id/textSourceBadge"
+                android:id="@+id/textCallerName"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary_dark"
+                android:ellipsize="end"
+                android:singleLine="true" />
+
+            <TextView
+                android:id="@+id/textDirectionPill"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:paddingStart="8dp"
@@ -110,26 +65,49 @@
                 android:paddingTop="3dp"
                 android:paddingBottom="3dp"
                 android:textSize="10sp"
-                android:textStyle="bold" />
-
-            <Space android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
-
-            <Button
-                android:id="@+id/btnPlay"
-                android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:text="Play"
-                android:textSize="12sp" />
-
-            <Button
-                android:id="@+id/btnDebug"
-                android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:text="Debug"
-                android:textSize="12sp" />
+                android:textStyle="bold"
+                android:textColor="#FFFFFF"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/bg_pill_dark" />
 
         </LinearLayout>
 
+        <!-- Duration + date -->
+        <TextView
+            android:id="@+id/textDurationDate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="12sp"
+            android:textColor="@color/text_secondary_dark"
+            android:layout_marginBottom="3dp" />
+
+        <!-- Upload status -->
+        <TextView
+            android:id="@+id/textUploadStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+
     </LinearLayout>
+
+    <!-- Pink circular play button -->
+    <FrameLayout
+        android:id="@+id/btnPlay"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:layout_marginStart="12dp"
+        android:background="@drawable/bg_circle_pink"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_play"
+            android:contentDescription="Play recording" />
+
+    </FrameLayout>
 
 </LinearLayout>

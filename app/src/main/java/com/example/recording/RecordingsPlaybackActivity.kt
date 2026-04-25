@@ -1,5 +1,7 @@
 package com.example.recording
 
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.os.Bundle
@@ -7,104 +9,118 @@ import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.widget.ArrayAdapter
-import android.widget.Button
+import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.ListView
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import java.io.File
 import java.util.Locale
 import kotlin.concurrent.thread
 
 class RecordingsPlaybackActivity : AppCompatActivity() {
 
-    private lateinit var nowPlaying: TextView
+    private lateinit var textAvatar: TextView
+    private lateinit var textNowPlaying: TextView
+    private lateinit var textSub: TextView
     private lateinit var seekBar: SeekBar
-    private lateinit var playPause: Button
-    private lateinit var stopBtn: Button
+    private lateinit var textCurrentTime: TextView
+    private lateinit var textTotalTime: TextView
+    private lateinit var btnPlayPause: FrameLayout
+    private lateinit var iconPlayPause: ImageView
     private lateinit var listView: ListView
 
     private val handler = Handler(Looper.getMainLooper())
     private var seekTick: Runnable? = null
-
     private var mediaPlayer: MediaPlayer? = null
     private var userSeeking = false
+    private var currentFile: File? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_recordings_playback)
 
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.title = getString(R.string.playback_title)
+        textAvatar       = findViewById(R.id.textPlaybackAvatar)
+        textNowPlaying   = findViewById(R.id.playbackNowPlaying)
+        textSub          = findViewById(R.id.textPlaybackSub)
+        seekBar          = findViewById(R.id.playbackSeek)
+        textCurrentTime  = findViewById(R.id.textPlaybackCurrentTime)
+        textTotalTime    = findViewById(R.id.textPlaybackTotalTime)
+        btnPlayPause     = findViewById(R.id.playbackPlayPause)
+        iconPlayPause    = findViewById(R.id.iconPlayPause)
+        listView         = findViewById(R.id.playbackList)
 
-        nowPlaying = findViewById(R.id.playbackNowPlaying)
-        seekBar    = findViewById(R.id.playbackSeek)
-        playPause  = findViewById(R.id.playbackPlayPause)
-        stopBtn    = findViewById(R.id.playbackStop)
-        listView   = findViewById(R.id.playbackList)
+        // Back button
+        findViewById<View>(R.id.btnBack).setOnClickListener { finish() }
 
         val files = listRecordingFiles()
         if (files.isEmpty()) {
-            nowPlaying.text = getString(R.string.no_recordings_found)
+            textNowPlaying.text = getString(R.string.no_recordings_found)
             listView.visibility = View.GONE
             return
         }
 
+        // List adapter with dark background items
         val labels = files.map { it.name }
-        listView.adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, labels)
-        listView.setOnItemClickListener { _, _, position, _ -> playFile(files[position]) }
+        listView.adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_list_item_1,
+            labels
+        )
+        listView.setOnItemClickListener { _, _, position, _ ->
+            playFile(files[position])
+        }
 
         seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                if (fromUser) mediaPlayer?.seekTo(progress)
+                if (fromUser) {
+                    mediaPlayer?.seekTo(progress)
+                    textCurrentTime.text = formatDuration(progress)
+                }
             }
             override fun onStartTrackingTouch(seekBar: SeekBar?) { userSeeking = true }
             override fun onStopTrackingTouch(seekBar: SeekBar?) { userSeeking = false }
         })
 
-        playPause.setOnClickListener {
+        btnPlayPause.setOnClickListener {
             val mp = mediaPlayer ?: return@setOnClickListener
             if (mp.isPlaying) {
                 mp.pause()
-                playPause.text = getString(R.string.playback_play)
+                iconPlayPause.setImageResource(R.drawable.ic_play)
                 stopSeekUpdates()
             } else {
                 mp.start()
-                playPause.text = getString(R.string.playback_pause)
+                iconPlayPause.setImageResource(R.drawable.ic_pause)
                 startSeekUpdates()
             }
         }
 
-        stopBtn.setOnClickListener { stopPlayback(resetUi = true) }
-
-        // If launched from RecordingsFragment with a specific file, auto-play it
+        // If launched with a specific file path, auto-play it
         val preSelectedPath = intent.getStringExtra(EXTRA_FILE_PATH)
         if (preSelectedPath != null) {
-            val targetFile = files.firstOrNull { it.absolutePath == preSelectedPath }
-            if (targetFile != null) {
-                val idx = files.indexOf(targetFile)
-                listView.setItemChecked(idx, true)
+            val target = files.firstOrNull { it.absolutePath == preSelectedPath }
+            if (target != null) {
+                val idx = files.indexOf(target)
                 listView.smoothScrollToPosition(idx)
-                playFile(targetFile)
+                playFile(target)
             }
         }
     }
 
-    override fun onSupportNavigateUp(): Boolean { finish(); return true }
-    override fun onStop()    { super.onStop();    stopPlayback(resetUi = true) }
-    override fun onDestroy() { stopPlayback(resetUi = false); super.onDestroy() }
+    override fun onStop()    { super.onStop();    stopPlayback() }
+    override fun onDestroy() { stopPlayback(); super.onDestroy() }
 
-    private fun listRecordingFiles(): List<File> {
-        val dir = File(getExternalFilesDir(null), "CallRecordings")
-        if (!dir.isDirectory) return emptyList()
-        return dir.listFiles { f -> f.isFile && f.extension.equals("mp4", true) }
-            ?.sortedByDescending { it.lastModified() }.orEmpty()
-    }
+    // ── Playback logic ────────────────────────────────────────────────────────
 
     private fun playFile(file: File) {
-        stopPlayback(resetUi = false)
-        nowPlaying.text = getString(R.string.playback_loading, file.name)
+        stopPlayback()
+        currentFile = file
+        textNowPlaying.text = "Loading…"
+        btnPlayPause.isEnabled = false
+
         thread {
             try {
                 val mp = MediaPlayer().apply {
@@ -119,33 +135,78 @@ class RecordingsPlaybackActivity : AppCompatActivity() {
                 }
                 runOnUiThread {
                     mediaPlayer = mp
+
+                    // Resolve contact name for the avatar
+                    val rawName = file.nameWithoutExtension
+                    val number  = parseNumber(rawName) ?: ""
+                    val displayName = if (number.isNotBlank())
+                        ContactLookup.getDisplayName(this, number)
+                    else
+                        rawName
+
+                    bindNowPlaying(displayName, file, mp.duration)
+
                     mp.setOnCompletionListener {
-                        playPause.text = getString(R.string.playback_play)
+                        iconPlayPause.setImageResource(R.drawable.ic_play)
                         stopSeekUpdates()
                         seekBar.progress = 0
+                        textCurrentTime.text = "0:00"
                     }
                     mp.setOnErrorListener { _, what, extra ->
-                        Toast.makeText(this, getString(R.string.playback_error, what, extra), Toast.LENGTH_LONG).show()
+                        Toast.makeText(this, "Playback error ($what/$extra)", Toast.LENGTH_LONG).show()
                         true
                     }
-                    val duration = mp.duration.coerceAtLeast(0)
-                    seekBar.max      = duration
-                    seekBar.progress = 0
-                    seekBar.isEnabled  = duration > 0
-                    playPause.isEnabled = true
-                    stopBtn.isEnabled   = true
-                    playPause.text = getString(R.string.playback_pause)
-                    nowPlaying.text = getString(R.string.playback_now, file.name, formatDuration(duration))
+
+                    btnPlayPause.isEnabled = true
                     mp.start()
+                    iconPlayPause.setImageResource(R.drawable.ic_pause)
                     startSeekUpdates()
                 }
             } catch (e: Exception) {
                 runOnUiThread {
-                    nowPlaying.text = getString(R.string.playback_open_failed, e.message ?: e.toString())
-                    Toast.makeText(this, nowPlaying.text, Toast.LENGTH_LONG).show()
+                    textNowPlaying.text = "Could not open file: ${e.message}"
+                    Toast.makeText(this, textNowPlaying.text, Toast.LENGTH_LONG).show()
                 }
             }
         }
+    }
+
+    private fun bindNowPlaying(displayName: String, file: File, durationMs: Int) {
+        // Avatar initials + color
+        val initials = ContactLookup.initials(displayName)
+        textAvatar.text = initials
+        val avatarColors = intArrayOf(
+            R.color.avatar_1, R.color.avatar_2, R.color.avatar_3,
+            R.color.avatar_4, R.color.avatar_5
+        )
+        val idx = (displayName.hashCode() and 0x7FFFFFFF) % avatarColors.size
+        val circle = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(ContextCompat.getColor(this@RecordingsPlaybackActivity, avatarColors[idx]))
+        }
+        textAvatar.background = circle
+
+        textNowPlaying.text = displayName.ifBlank { file.nameWithoutExtension }
+
+        // Sub text: direction + duration
+        val raw = file.nameWithoutExtension
+        val direction = when {
+            raw.startsWith("INCOMING", ignoreCase = true) -> "Incoming"
+            raw.startsWith("OUTGOING", ignoreCase = true) -> "Outgoing"
+            else -> ""
+        }
+        textSub.text = buildString {
+            if (direction.isNotEmpty()) append(direction)
+            if (direction.isNotEmpty() && durationMs > 0) append("  ·  ")
+            if (durationMs > 0) append(formatDuration(durationMs))
+        }
+
+        // Seek bar
+        seekBar.max      = durationMs.coerceAtLeast(0)
+        seekBar.progress = 0
+        seekBar.isEnabled = durationMs > 0
+        textCurrentTime.text = "0:00"
+        textTotalTime.text   = formatDuration(durationMs)
     }
 
     private fun startSeekUpdates() {
@@ -153,7 +214,11 @@ class RecordingsPlaybackActivity : AppCompatActivity() {
         val tick = object : Runnable {
             override fun run() {
                 val mp = mediaPlayer
-                if (mp != null && mp.isPlaying && !userSeeking) seekBar.progress = mp.currentPosition
+                if (mp != null && mp.isPlaying && !userSeeking) {
+                    val pos = mp.currentPosition
+                    seekBar.progress    = pos
+                    textCurrentTime.text = formatDuration(pos)
+                }
                 handler.postDelayed(this, 500L)
             }
         }
@@ -166,18 +231,50 @@ class RecordingsPlaybackActivity : AppCompatActivity() {
         seekTick = null
     }
 
-    private fun stopPlayback(resetUi: Boolean) {
+    private fun stopPlayback() {
         stopSeekUpdates()
         runCatching { mediaPlayer?.stop(); mediaPlayer?.release() }
         mediaPlayer = null
-        if (resetUi) {
-            seekBar.progress = 0
-            seekBar.isEnabled   = false
-            playPause.isEnabled = false
-            stopBtn.isEnabled   = false
-            playPause.text = getString(R.string.playback_play)
-            nowPlaying.text = getString(R.string.playback_none)
+        if (::btnPlayPause.isInitialized) {
+            btnPlayPause.isEnabled = false
+            iconPlayPause.setImageResource(R.drawable.ic_play)
         }
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private fun listRecordingFiles(): List<File> {
+        val allFiles = mutableListOf<File>()
+
+        // App internal
+        val appDir = File(getExternalFilesDir(null), "CallRecordings")
+        appDir.listFiles { f -> f.isFile }?.let { allFiles.addAll(it) }
+
+        // OEM brand folders
+        val brand = AppPrefs.getDeviceBrand(this)
+        val oemPaths = if (brand == AppPrefs.DeviceBrand.CUSTOM) {
+            val c = AppPrefs.getCustomFolder(this)
+            if (c.isBlank()) emptyList() else listOf(c)
+        } else {
+            brand.folders
+        }
+        val audioExts = setOf("mp4", "mp3", "m4a", "amr", "aac", "wav", "ogg", "3gp")
+        oemPaths.forEach { path ->
+            val dir = File(path)
+            if (dir.exists()) {
+                dir.listFiles { f -> f.isFile && f.extension.lowercase() in audioExts }
+                    ?.let { allFiles.addAll(it) }
+            }
+        }
+
+        return allFiles
+            .distinctBy { it.absolutePath }
+            .sortedByDescending { it.lastModified() }
+    }
+
+    private fun parseNumber(rawName: String): String? {
+        val parts = rawName.split("__")
+        return if (parts.size >= 2) parts[1].split("_").firstOrNull() else null
     }
 
     private fun formatDuration(ms: Int): String {

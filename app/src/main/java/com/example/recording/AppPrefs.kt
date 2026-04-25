@@ -13,6 +13,9 @@ object AppPrefs {
     private const val KEY_DEVICE_BRAND         = "oem_device_brand"
     private const val KEY_CUSTOM_FOLDER        = "oem_custom_folder"
 
+    // UI
+    private const val KEY_NIGHT_MODE           = "night_mode"
+
     // ── Recording behaviour ───────────────────────────────────────────────────
 
     fun isDeleteAfterUpload(context: Context): Boolean =
@@ -26,6 +29,15 @@ object AppPrefs {
 
     fun setForceSpeakerphone(context: Context, value: Boolean) =
         prefs(context).edit().putBoolean(KEY_FORCE_SPEAKER, value).apply()
+
+    // ── Night mode ────────────────────────────────────────────────────────────
+
+    /** Returns true when the user has enabled dark/night mode (default = true). */
+    fun isNightMode(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_NIGHT_MODE, true)
+
+    fun setNightMode(context: Context, value: Boolean) =
+        prefs(context).edit().putBoolean(KEY_NIGHT_MODE, value).apply()
 
     // ── OEM folder selection ──────────────────────────────────────────────────
 
