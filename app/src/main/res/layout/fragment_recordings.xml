@@ -140,6 +140,46 @@
         android:layout_height="2dp"
         android:background="@color/dark_divider" />
 
+    <!-- Folder status banner -->
+    <LinearLayout
+        android:id="@+id/layoutFolderBanner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:background="@color/dark_card"
+        android:layout_marginBottom="1dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground">
+
+        <TextView
+            android:id="@+id/textBannerTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/text_primary_dark"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/textBannerSubtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/text_secondary_dark"
+            android:textSize="12sp"
+            android:layout_marginTop="2dp" />
+
+        <Button
+            android:id="@+id/btnGrantStorage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Grant All Files Access"
+            android:textSize="12sp"
+            android:layout_marginTop="6dp"
+            android:visibility="gone" />
+
+    </LinearLayout>
+
     <!-- Content area -->
     <FrameLayout
         android:layout_width="match_parent"

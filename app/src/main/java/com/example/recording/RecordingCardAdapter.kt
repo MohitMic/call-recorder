@@ -34,6 +34,14 @@ data class RecordingItem(
     val direction: String        // "INCOMING", "OUTGOING", or "UNKNOWN"
 )
 
+data class FolderInfo(val path: String, val exists: Boolean, val fileCount: Int)
+
+data class ScanResult(
+    val items: List<RecordingItem>,
+    val folders: List<FolderInfo>,
+    val brandLabel: String
+)
+
 // ── Adapter ───────────────────────────────────────────────────────────────────
 
 class RecordingCardAdapter(
@@ -179,13 +187,17 @@ class RecordingCardAdapter(
 
         private val AUDIO_EXTENSIONS = setOf("mp4", "mp3", "m4a", "amr", "aac", "wav", "ogg", "3gp")
 
-        fun loadItems(context: Context): List<RecordingItem> {
+        fun scan(context: Context): ScanResult {
             val allFiles = mutableListOf<File>()
+            val folderInfos = mutableListOf<FolderInfo>()
 
             // App-internal recordings folder
             val appDir = File(context.getExternalFilesDir(null), "CallRecordings")
-            appDir.listFiles { f -> f.isFile && f.extension.lowercase() in AUDIO_EXTENSIONS }
-                ?.let { allFiles.addAll(it) }
+            val appFiles = appDir.listFiles { f -> f.isFile && f.extension.lowercase() in AUDIO_EXTENSIONS }
+            appFiles?.let { allFiles.addAll(it) }
+            folderInfos.add(
+                FolderInfo(appDir.absolutePath, appDir.exists(), appFiles?.size ?: 0)
+            )
 
             // OEM brand folders
             val brand = AppPrefs.getDeviceBrand(context)
@@ -197,12 +209,23 @@ class RecordingCardAdapter(
             }
             oemPaths.forEach { path ->
                 val dir = File(path)
-                if (dir.exists()) {
+                val exists = dir.exists()
+                val files = if (exists) {
                     dir.listFiles { f ->
                         f.isFile && f.extension.lowercase() in AUDIO_EXTENSIONS
-                    }?.let { allFiles.addAll(it) }
-                }
+                    }
+                } else null
+                files?.let { allFiles.addAll(it) }
+                folderInfos.add(FolderInfo(path, exists, files?.size ?: 0))
             }
+
+            val items = buildItems(context, allFiles)
+            return ScanResult(items, folderInfos, brand.label)
+        }
+
+        fun loadItems(context: Context): List<RecordingItem> = scan(context).items
+
+        private fun buildItems(context: Context, allFiles: List<File>): List<RecordingItem> {
 
             if (allFiles.isEmpty()) return emptyList()
 

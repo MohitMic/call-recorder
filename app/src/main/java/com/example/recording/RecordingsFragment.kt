@@ -1,11 +1,17 @@
 package com.example.recording
 
+import android.app.AlertDialog
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.Settings
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
 import android.view.inputmethod.InputMethodManager
+import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -37,6 +43,14 @@ class RecordingsFragment : Fragment(R.layout.fragment_recordings) {
     private lateinit var tabIncoming: TextView
     private lateinit var tabOutgoing: TextView
 
+    // Folder banner
+    private lateinit var layoutFolderBanner: LinearLayout
+    private lateinit var textBannerTitle: TextView
+    private lateinit var textBannerSubtitle: TextView
+    private lateinit var btnGrantStorage: Button
+    private var lastFolders: List<FolderInfo> = emptyList()
+    private var lastBrandLabel: String = ""
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -49,6 +63,13 @@ class RecordingsFragment : Fragment(R.layout.fragment_recordings) {
         tabAll        = view.findViewById(R.id.tabAll)
         tabIncoming   = view.findViewById(R.id.tabIncoming)
         tabOutgoing   = view.findViewById(R.id.tabOutgoing)
+        layoutFolderBanner = view.findViewById(R.id.layoutFolderBanner)
+        textBannerTitle    = view.findViewById(R.id.textBannerTitle)
+        textBannerSubtitle = view.findViewById(R.id.textBannerSubtitle)
+        btnGrantStorage    = view.findViewById(R.id.btnGrantStorage)
+
+        layoutFolderBanner.setOnClickListener { showFolderDiagnosticDialog() }
+        btnGrantStorage.setOnClickListener { requestAllFilesAccess() }
 
         adapter = RecordingCardAdapter { item ->
             val intent = Intent(requireContext(), RecordingsPlaybackActivity::class.java)
@@ -138,15 +159,80 @@ class RecordingsFragment : Fragment(R.layout.fragment_recordings) {
         recycler.visibility     = View.GONE
 
         viewLifecycleOwner.lifecycleScope.launch {
-            val items = withContext(Dispatchers.IO) {
-                RecordingCardAdapter.loadItems(requireContext())
+            val result = withContext(Dispatchers.IO) {
+                RecordingCardAdapter.scan(requireContext())
             }
             progressLoad.visibility = View.GONE
-            if (items.isEmpty()) {
+            lastFolders = result.folders
+            lastBrandLabel = result.brandLabel
+            updateBanner(result)
+            if (result.items.isEmpty()) {
                 layoutEmpty.visibility = View.VISIBLE
             } else {
                 recycler.visibility = View.VISIBLE
-                adapter.submitFull(items)
+                adapter.submitFull(result.items)
+            }
+        }
+    }
+
+    // ── Folder status banner ──────────────────────────────────────────────────
+
+    private fun hasAllFilesAccess(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Environment.isExternalStorageManager()
+        } else true
+    }
+
+    private fun updateBanner(result: ScanResult) {
+        val granted = hasAllFilesAccess()
+        val totalFiles = result.folders.sumOf { it.fileCount }
+        val watched = result.folders.count { it.exists }
+
+        textBannerTitle.text = "Source: ${result.brandLabel}"
+        textBannerSubtitle.text = if (!granted) {
+            "⚠ All Files Access not granted — app can't read OEM folders. Tap to grant."
+        } else {
+            "$totalFiles file(s) found across $watched of ${result.folders.size} folder(s). Tap for details."
+        }
+        btnGrantStorage.visibility = if (granted) View.GONE else View.VISIBLE
+    }
+
+    private fun showFolderDiagnosticDialog() {
+        val granted = hasAllFilesAccess()
+        val sb = StringBuilder()
+        sb.append("Brand: ").append(lastBrandLabel).append("\n")
+        sb.append("All Files Access: ").append(if (granted) "GRANTED" else "NOT GRANTED").append("\n\n")
+        if (lastFolders.isEmpty()) {
+            sb.append("(No folders configured)")
+        } else {
+            lastFolders.forEachIndexed { i, f ->
+                sb.append(i + 1).append(". ").append(f.path).append("\n")
+                sb.append("   ")
+                sb.append(if (f.exists) "exists · ${f.fileCount} file(s)" else "MISSING")
+                sb.append("\n\n")
+            }
+        }
+        AlertDialog.Builder(requireContext())
+            .setTitle("Folder diagnostic")
+            .setMessage(sb.toString())
+            .setPositiveButton("OK", null)
+            .apply {
+                if (!granted) {
+                    setNeutralButton("Grant access") { _, _ -> requestAllFilesAccess() }
+                }
+            }
+            .show()
+    }
+
+    private fun requestAllFilesAccess() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            try {
+                val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                    data = Uri.parse("package:${requireContext().packageName}")
+                }
+                startActivity(intent)
+            } catch (_: Exception) {
+                startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
             }
         }
     }
