@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Call Recordings — Admin</title>
+<style>
+  :root {
+    --bg: #121212;
+    --card: #1e1e1e;
+    --card-hi: #2a2a2a;
+    --pink: #e91e63;
+    --text: #ffffff;
+    --text-dim: #a0a0a0;
+    --green: #4caf50;
+    --orange: #ff9800;
+    --red: #ef5350;
+    --blue: #42a5f5;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  header {
+    background: var(--card);
+    padding: 16px 24px;
+    border-bottom: 1px solid #2a2a2a;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  header h1 {
+    margin: 0;
+    font-size: 20px;
+    color: var(--pink);
+  }
+  .header-stats {
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+  .controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .controls input, .controls select, .controls button {
+    background: var(--card-hi);
+    color: var(--text);
+    border: 1px solid #333;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+  }
+  .controls button {
+    cursor: pointer;
+    background: var(--pink);
+    border-color: var(--pink);
+  }
+  .controls button:hover { opacity: 0.9; }
+  main {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 16px;
+  }
+  .status {
+    text-align: center;
+    color: var(--text-dim);
+    padding: 48px 16px;
+  }
+  .error {
+    background: #4a1a1a;
+    color: #ffb4b4;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    font-size: 13px;
+  }
+  .card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  .card.playing {
+    border: 1px solid var(--pink);
+  }
+  .avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--card-hi);
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .info {
+    flex: 1;
+    min-width: 0;
+  }
+  .info-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+    flex-wrap: wrap;
+  }
+  .name {
+    font-weight: 600;
+    font-size: 15px;
+  }
+  .pill {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    letter-spacing: 0.5px;
+  }
+  .pill.in   { background: rgba(76,175,80,0.2);  color: var(--green); }
+  .pill.out  { background: rgba(66,165,245,0.2); color: var(--blue);  }
+  .pill.unk  { background: rgba(160,160,160,0.2); color: var(--text-dim); }
+  .meta {
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .source-tag {
+    font-family: monospace;
+    font-size: 10px;
+    background: var(--card-hi);
+    padding: 1px 6px;
+    border-radius: 4px;
+    color: var(--text-dim);
+    margin-left: 8px;
+  }
+  .play-btn {
+    background: var(--pink);
+    border: none;
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .play-btn:hover { opacity: 0.9; }
+  .player-bar {
+    position: sticky;
+    top: 64px;
+    background: var(--card);
+    border-bottom: 1px solid #2a2a2a;
+    padding: 10px 16px;
+    z-index: 9;
+    display: none;
+  }
+  .player-bar.visible { display: block; }
+  .player-bar .title {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+  audio { width: 100%; }
+  .login-box {
+    max-width: 360px;
+    margin: 80px auto;
+    background: var(--card);
+    padding: 24px;
+    border-radius: 12px;
+  }
+  .login-box h2 { margin-top: 0; color: var(--pink); }
+  .login-box input {
+    width: 100%;
+    background: var(--card-hi);
+    color: var(--text);
+    border: 1px solid #333;
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    font-size: 14px;
+  }
+  .login-box button {
+    width: 100%;
+    background: var(--pink);
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .login-hint {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 12px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Login gate (very simple shared password, kept in-memory only) -->
+<div id="loginGate">
+  <div class="login-box">
+    <h2>Admin Sign-in</h2>
+    <p style="font-size:13px;color:var(--text-dim);margin-top:0;">
+      Enter the admin password to view recordings.
+    </p>
+    <input id="pwInput" type="password" placeholder="Password" />
+    <button id="pwBtn">Unlock</button>
+    <div class="login-hint">
+      The password is set in <code>index.html</code> (constant <code>ADMIN_PASSWORD</code>). Change it before sharing the URL.
+    </div>
+  </div>
+</div>
+
+<!-- Main app (hidden until logged in) -->
+<div id="app" style="display:none;">
+  <header>
+    <div>
+      <h1>📞 Call Recordings</h1>
+      <div class="header-stats" id="stats">Loading…</div>
+    </div>
+    <div class="controls">
+      <input id="searchInput" type="text" placeholder="Search number or name…" />
+      <select id="dirFilter">
+        <option value="ALL">All</option>
+        <option value="INCOMING">Incoming</option>
+        <option value="OUTGOING">Outgoing</option>
+      </select>
+      <button id="refreshBtn">Refresh</button>
+    </div>
+  </header>
+
+  <div class="player-bar" id="playerBar">
+    <div class="title" id="playerTitle"></div>
+    <audio id="audioEl" controls></audio>
+  </div>
+
+  <main>
+    <div id="status" class="status">Loading recordings…</div>
+    <div id="errorBox" class="error" style="display:none;"></div>
+    <div id="list"></div>
+  </main>
+</div>
+
+<script>
+  // ─────────────────────────────────────────────────────────────────────────
+  //  CONFIG — edit these
+  // ─────────────────────────────────────────────────────────────────────────
+  const SUPABASE_URL = "https://tahyfwvlnlufqkzknbcm.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_VPkvLBuf_p8ltI4LH0bTuw_PHp6rLYn";
+
+  // Simple shared password (client-side only — change before sharing the URL).
+  // For real auth use Supabase Auth; this is a tiny gate to keep the URL
+  // from being browsed casually.
+  const ADMIN_PASSWORD = "admin123";
+
+  // ─────────────────────────────────────────────────────────────────────────
+
+  const loginGate = document.getElementById("loginGate");
+  const app       = document.getElementById("app");
+  const pwInput   = document.getElementById("pwInput");
+  const pwBtn     = document.getElementById("pwBtn");
+
+  function tryLogin() {
+    if (pwInput.value === ADMIN_PASSWORD) {
+      sessionStorage.setItem("adminUnlocked", "1");
+      showApp();
+    } else {
+      pwInput.value = "";
+      pwInput.placeholder = "Wrong password — try again";
+    }
+  }
+  pwBtn.addEventListener("click", tryLogin);
+  pwInput.addEventListener("keydown", (e) => { if (e.key === "Enter") tryLogin(); });
+
+  if (sessionStorage.getItem("adminUnlocked") === "1") showApp();
+
+  function showApp() {
+    loginGate.style.display = "none";
+    app.style.display = "";
+    loadRecordings();
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  Data
+  // ─────────────────────────────────────────────────────────────────────────
+  const listEl    = document.getElementById("list");
+  const statusEl  = document.getElementById("status");
+  const errorBox  = document.getElementById("errorBox");
+  const statsEl   = document.getElementById("stats");
+  const searchEl  = document.getElementById("searchInput");
+  const dirEl     = document.getElementById("dirFilter");
+  const audioEl   = document.getElementById("audioEl");
+  const playerBar = document.getElementById("playerBar");
+  const playerTitle = document.getElementById("playerTitle");
+
+  let allRecordings = [];
+  let currentlyPlayingId = null;
+
+  async function loadRecordings() {
+    statusEl.style.display = "";
+    statusEl.textContent = "Loading recordings…";
+    errorBox.style.display = "none";
+    listEl.innerHTML = "";
+
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/recordings?select=*&order=recorded_at.desc&limit=500`,
+        {
+          headers: {
+            apikey: SUPABASE_KEY,
+            Authorization: `Bearer ${SUPABASE_KEY}`,
+          },
+        }
+      );
+      if (!res.ok) throw new Error(`Supabase error: ${res.status} ${await res.text()}`);
+      allRecordings = await res.json();
+      statsEl.textContent = `${allRecordings.length} recording${allRecordings.length === 1 ? "" : "s"}`;
+      render();
+    } catch (e) {
+      statusEl.style.display = "none";
+      errorBox.style.display = "";
+      errorBox.textContent = "Failed to load: " + e.message + "\n\nMake sure the `recordings` table has a SELECT policy for the anon role.";
+    }
+  }
+
+  function render() {
+    const q = searchEl.value.trim().toLowerCase();
+    const dir = dirEl.value;
+
+    const filtered = allRecordings.filter((r) => {
+      if (dir !== "ALL" && (r.direction || "").toUpperCase() !== dir) return false;
+      if (q) {
+        const hay = `${r.number || ""} ${r.file_name || ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      statusEl.style.display = "";
+      statusEl.textContent = allRecordings.length === 0
+        ? "No recordings yet. Make a call on the Android app."
+        : "No recordings match your filters.";
+      listEl.innerHTML = "";
+      return;
+    }
+    statusEl.style.display = "none";
+    listEl.innerHTML = filtered.map(renderCard).join("");
+
+    // Wire play buttons
+    document.querySelectorAll(".play-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const id = btn.dataset.id;
+        const url = btn.dataset.url;
+        const title = btn.dataset.title;
+        if (!url) {
+          alert("No Cloudinary URL for this recording.");
+          return;
+        }
+        if (currentlyPlayingId === id) {
+          audioEl.paused ? audioEl.play() : audioEl.pause();
+          return;
+        }
+        currentlyPlayingId = id;
+        playerBar.classList.add("visible");
+        playerTitle.textContent = title;
+        audioEl.src = url;
+        audioEl.play().catch(() => {});
+        document.querySelectorAll(".card").forEach(c => c.classList.remove("playing"));
+        btn.closest(".card").classList.add("playing");
+      });
+    });
+  }
+
+  function renderCard(r) {
+    const name = r.number || "Unknown";
+    const initials = (name.match(/[A-Za-z0-9]/g) || ["?"]).slice(0, 2).join("").toUpperCase();
+    const dir = (r.direction || "UNKNOWN").toUpperCase();
+    const dirClass = dir === "INCOMING" ? "in" : dir === "OUTGOING" ? "out" : "unk";
+    const dirLabel = dir === "INCOMING" ? "↓ IN" : dir === "OUTGOING" ? "↑ OUT" : "?";
+    const date = r.recorded_at ? new Date(r.recorded_at).toLocaleString(undefined, {
+      year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit"
+    }) : "";
+    const dur = formatMs(r.duration_ms || 0);
+    const url = r.cloudinary_url || "";
+    const safeTitle = (name + " · " + (r.file_name || "")).replace(/"/g, "&quot;");
+
+    return `
+      <div class="card" data-id="${r.id}">
+        <div class="avatar">${escapeHtml(initials)}</div>
+        <div class="info">
+          <div class="info-top">
+            <span class="name">${escapeHtml(name)}</span>
+            <span class="pill ${dirClass}">${dirLabel}</span>
+            ${r.source_used ? `<span class="source-tag">${escapeHtml(r.source_used)}</span>` : ""}
+          </div>
+          <div class="meta">${escapeHtml(date)} · ${dur}</div>
+          <div class="meta" style="font-size:11px;opacity:0.7;">${escapeHtml(r.file_name || "")}</div>
+        </div>
+        <button class="play-btn" data-id="${r.id}" data-url="${escapeHtml(url)}" data-title="${safeTitle}" title="Play">▶</button>
+      </div>
+    `;
+  }
+
+  function formatMs(ms) {
+    const s = Math.floor(ms / 1000);
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[c]));
+  }
+
+  document.getElementById("refreshBtn").addEventListener("click", loadRecordings);
+  searchEl.addEventListener("input", render);
+  dirEl.addEventListener("change", render);
+</script>
+</body>
+</html>
