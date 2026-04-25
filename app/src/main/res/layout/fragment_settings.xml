@@ -103,16 +103,34 @@
                         android:textSize="13sp"
                         android:layout_marginBottom="4dp" />
 
-                    <EditText
-                        android:id="@+id/editCustomFolder"
+                    <!-- Path input + Browse button side by side -->
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="@string/settings_custom_folder_hint"
-                        android:textColor="@color/text_primary_dark"
-                        android:textColorHint="@color/text_secondary_dark"
-                        android:inputType="textUri"
-                        android:singleLine="true"
-                        android:textSize="13sp" />
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <EditText
+                            android:id="@+id/editCustomFolder"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:hint="@string/settings_custom_folder_hint"
+                            android:textColor="@color/text_primary_dark"
+                            android:textColorHint="@color/text_secondary_dark"
+                            android:inputType="textUri"
+                            android:singleLine="true"
+                            android:textSize="13sp" />
+
+                        <Button
+                            android:id="@+id/btnBrowseFolder"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="Browse…"
+                            android:textSize="12sp" />
+
+                    </LinearLayout>
 
                 </LinearLayout>
 
