@@ -97,7 +97,8 @@ class FileUploader(
             .setType(MultipartBody.FORM)
             .addFormDataPart("file", file.name, fileBody)
             .addFormDataPart("upload_preset", Config.CLOUDINARY_UPLOAD_PRESET)
-            .addFormDataPart("public_id", "call_recordings/${file.nameWithoutExtension}")
+            // `folder` is allowed on unsigned presets; `public_id` often is not.
+            .addFormDataPart("folder", "call_recordings")
             .build()
 
         val request = Request.Builder()
@@ -106,15 +107,20 @@ class FileUploader(
             .build()
 
         return client.newCall(request).execute().use { response ->
+            val body = response.body?.string()
             if (!response.isSuccessful) {
-                Log.w(TAG, "Cloudinary upload failed: ${response.code} ${response.message}")
+                Log.w(TAG, "Cloudinary upload failed: HTTP ${response.code} ${response.message} — body=$body")
                 return@use null
             }
-            val body = response.body?.string() ?: return@use null
+            if (body == null) {
+                Log.w(TAG, "Cloudinary returned empty body")
+                return@use null
+            }
+            Log.i(TAG, "Cloudinary upload OK for ${file.name}")
             runCatching {
                 JSONObject(body).getString("secure_url")
             }.getOrElse {
-                Log.w(TAG, "Could not parse Cloudinary secure_url from response")
+                Log.w(TAG, "Could not parse Cloudinary secure_url from response: $body")
                 null
             }
         }
