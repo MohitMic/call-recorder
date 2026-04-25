@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name">Call Recorder</string>
 
-    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_dashboard">Setup</string>
     <string name="nav_recordings">Recordings</string>
     <string name="nav_settings">Settings</string>
 
@@ -99,7 +99,6 @@
     <!-- Drawer -->
     <string name="drawer_subtitle">Automatic call recorder</string>
     <string name="drawer_night_mode">Night mode</string>
-    <string name="nav_dashboard">Setup</string>
 
     <!-- Upload status labels -->
     <string name="upload_status_ok">Uploaded ✓</string>
