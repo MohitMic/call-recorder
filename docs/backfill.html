@@ -216,14 +216,19 @@
     </details>
   </div>
 
-  <!-- Step 2: Paste JSON -->
+  <!-- Step 2: Paste JSON or URLs -->
   <div class="card">
-    <h2><span class="step-num">2</span>Paste the JSON output</h2>
+    <h2><span class="step-num">2</span>Paste data</h2>
     <p style="font-size:13px;color:var(--text-dim);margin-top:0;">
-      Paste the entire JSON the terminal printed. The page will parse it locally —
-      nothing is sent anywhere yet.
+      Two ways — pick whichever is easier:
     </p>
-    <textarea id="jsonInput" placeholder='{ "resources": [ ... ] }'></textarea>
+    <p style="font-size:13px;color:var(--text);margin-top:0;">
+      <strong>A.</strong> Paste the full JSON output from the terminal command above, OR<br/>
+      <strong>B.</strong> Paste Cloudinary URLs (one per line) — get them by opening
+      <a href="https://console.cloudinary.com/console/media_library/folders/call_recordings" target="_blank">Media Library</a>,
+      clicking each file to copy its URL.
+    </p>
+    <textarea id="jsonInput" placeholder='Paste JSON here, OR paste URLs one per line:&#10;https://res.cloudinary.com/djrfmyimy/video/upload/v123.../call_recordings/9571091011_20260425175840.mp3&#10;https://res.cloudinary.com/djrfmyimy/video/upload/v123.../call_recordings/...'></textarea>
     <button id="btnAnalyze">Analyze</button>
   </div>
 
@@ -340,20 +345,35 @@ Invoke-RestMethod -Uri "${url}" -Headers @{ Authorization = $auth } | ConvertTo-
     $("btnImport").disabled = true;
     $("resultsCard").style.display = "";
 
-    let parsed;
+    const raw = $("jsonInput").value.trim();
+    if (!raw) {
+      log("✗ Paste either JSON or a list of URLs first.", "err");
+      return;
+    }
+
+    let resources = [];
+    // Try JSON first
     try {
-      parsed = JSON.parse($("jsonInput").value);
-    } catch (e) {
-      log("✗ Could not parse JSON: " + e.message, "err");
-      log("Make sure you pasted the full output of the curl command, including the outer braces.", "dim");
-      return;
+      const parsed = JSON.parse(raw);
+      const arr = parsed.resources || parsed;
+      if (Array.isArray(arr)) {
+        resources = arr;
+        log(`✓ Parsed JSON: ${resources.length} resource(s).`, "ok");
+      }
+    } catch (_) { /* fall through to URL mode */ }
+
+    // URL list mode
+    if (resources.length === 0) {
+      const urlRe = /https?:\/\/res\.cloudinary\.com\/[^\s"',<>]+/g;
+      const urls = raw.match(urlRe) || [];
+      if (urls.length === 0) {
+        log("✗ Could not find any Cloudinary URLs or valid JSON.", "err");
+        log("Paste either the full JSON from the curl command, or one URL per line.", "dim");
+        return;
+      }
+      resources = urls.map((u) => urlToResource(u));
+      log(`✓ Parsed ${resources.length} URL(s).`, "ok");
     }
-    const resources = parsed.resources || parsed;
-    if (!Array.isArray(resources)) {
-      log("✗ JSON does not contain a 'resources' array. Did you paste the right output?", "err");
-      return;
-    }
-    log(`✓ Parsed ${resources.length} Cloudinary resource(s).`, "ok");
 
     log("Fetching existing Supabase rows…", "dim");
     let existing;
@@ -391,6 +411,27 @@ Invoke-RestMethod -Uri "${url}" -Headers @{ Authorization = $auth } | ConvertTo-
     if (!res.ok) throw new Error(`Supabase ${res.status}: ${await res.text()}`);
     const rows = await res.json();
     return new Set(rows.map((r) => r.cloudinary_url).filter(Boolean));
+  }
+
+  // ─── Convert a bare URL into a synthetic Cloudinary resource ─────────────
+  function urlToResource(url) {
+    // Extract the path after /upload/<version>/  →  call_recordings/<name>.<ext>
+    const m = url.match(/\/upload\/(?:v\d+\/)?(.+?)(?:\.([a-zA-Z0-9]+))?$/);
+    let publicId = m ? m[1] : url;
+    let format   = m && m[2] ? m[2] : "";
+    // If format is in publicId tail, strip it
+    if (!format && /\.[a-zA-Z0-9]{2,5}$/.test(publicId)) {
+      const dot = publicId.lastIndexOf(".");
+      format = publicId.substring(dot + 1);
+      publicId = publicId.substring(0, dot);
+    }
+    return {
+      public_id:  publicId,
+      secure_url: url,
+      format:     format,
+      created_at: new Date().toISOString(),
+      duration:   0,
+    };
   }
 
   // ─── Filename parsing ────────────────────────────────────────────────────
