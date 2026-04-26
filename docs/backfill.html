@@ -43,13 +43,26 @@
     margin-bottom: 16px;
   }
   .card h2 { margin: 0 0 12px; font-size: 16px; color: var(--pink); }
+  .card .step-num {
+    display: inline-block;
+    background: var(--pink);
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 24px;
+    font-size: 13px;
+    margin-right: 6px;
+  }
   label {
     display: block;
     font-size: 13px;
     color: var(--text-dim);
     margin-bottom: 4px;
+    margin-top: 8px;
   }
-  input[type="text"], input[type="password"] {
+  input[type="text"], input[type="password"], textarea {
     width: 100%;
     background: var(--card-hi);
     color: var(--text);
@@ -57,8 +70,12 @@
     padding: 10px 12px;
     border-radius: 6px;
     font-size: 14px;
-    margin-bottom: 12px;
     font-family: inherit;
+  }
+  textarea {
+    min-height: 120px;
+    font-family: ui-monospace, monospace;
+    font-size: 12px;
   }
   button {
     background: var(--pink);
@@ -69,11 +86,10 @@
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
+    margin-top: 12px;
   }
   button:disabled { opacity: 0.5; cursor: not-allowed; }
-  button.secondary {
-    background: var(--card-hi);
-  }
+  button.secondary { background: var(--card-hi); }
   button + button { margin-left: 8px; }
   .stat-row {
     display: flex;
@@ -108,40 +124,64 @@
   .log .warn { color: var(--orange); }
   .log .err  { color: var(--red); }
   .log .dim  { color: var(--text-dim); }
-  .warning {
-    background: #4a3a1a;
-    color: #ffd791;
+  .cmd-box {
+    background: #0a0a0a;
+    border: 1px solid #333;
+    border-radius: 6px;
+    padding: 12px;
+    font-family: ui-monospace, monospace;
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: #cfd;
+    margin-top: 8px;
+    position: relative;
+  }
+  .cmd-box .copy {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    font-size: 11px;
+    padding: 4px 8px;
+    margin: 0;
+  }
+  .info {
+    background: #1a3a4a;
+    color: #91d7ff;
     padding: 12px;
     border-radius: 6px;
     font-size: 13px;
     margin-bottom: 16px;
   }
   a { color: var(--pink); }
+  details { margin-top: 12px; }
+  details summary { cursor: pointer; color: var(--text-dim); font-size: 13px; }
 </style>
 </head>
 <body>
 
 <header>
   <h1>🔄 Backfill Cloudinary → Supabase</h1>
-  <p>One-time tool to import existing Cloudinary recordings into the admin panel.</p>
+  <p>Import recordings already in Cloudinary into the admin panel.</p>
 </header>
 
 <main>
 
-  <div class="warning">
-    <strong>Privacy:</strong> Your Cloudinary API secret is sent only to Cloudinary's servers
-    (api.cloudinary.com) for this scan. It's stored in this browser tab only (sessionStorage)
-    and is cleared when you close the tab. It never leaves your machine for any other destination.
+  <div class="info">
+    Cloudinary's Admin API blocks browser requests (CORS), so we fetch the list
+    from a terminal and paste the JSON here. Your API secret is typed only into
+    your terminal — never into this page.
   </div>
 
-  <!-- Step 1: Credentials -->
+  <!-- Step 1: Cloudinary credentials (just the key, used to build the curl) -->
   <div class="card">
-    <h2>Step 1 — Cloudinary credentials</h2>
+    <h2><span class="step-num">1</span>Generate the command</h2>
     <p style="font-size:13px;color:var(--text-dim);margin-top:0;">
-      Get them from
+      Get your API key + secret from
       <a href="https://console.cloudinary.com/settings/api-keys" target="_blank">
-        console.cloudinary.com/settings/api-keys
+        Cloudinary settings
       </a>.
+      Type them below — they're only used to build the command and stay in this tab.
     </p>
 
     <label>Cloud name</label>
@@ -153,16 +193,43 @@
     <label>API Secret</label>
     <input id="apiSecret" type="password" placeholder="abc...XYZ" />
 
-    <label>Folder prefix (Cloudinary)</label>
+    <label>Folder prefix</label>
     <input id="prefix" type="text" value="call_recordings" />
 
-    <button id="btnScan">Scan Cloudinary</button>
-    <button id="btnClearCreds" class="secondary">Forget credentials</button>
+    <p style="font-size:13px;color:var(--text-dim);margin-top:16px;">
+      <strong>Run this in a terminal</strong> (Windows PowerShell, macOS/Linux Terminal, or
+      <a href="https://shell.cloud.google.com" target="_blank">Google Cloud Shell</a> in your browser).
+    </p>
+
+    <div class="cmd-box" id="cmdBox">Fill in the fields above…</div>
+    <button id="btnCopy" class="secondary">Copy command</button>
+
+    <details>
+      <summary>What does this command do?</summary>
+      <p style="font-size:12px;color:var(--text-dim);">
+        It calls Cloudinary's Admin API to list every audio file under the
+        <code>call_recordings/</code> folder, with HTTP Basic Auth using your
+        API key + secret. The response is JSON. If you have more than 500 files,
+        you'll need to also pass <code>&amp;next_cursor=…</code> using the value
+        from the previous response — but most setups have far fewer.
+      </p>
+    </details>
   </div>
 
-  <!-- Step 2: Results -->
+  <!-- Step 2: Paste JSON -->
+  <div class="card">
+    <h2><span class="step-num">2</span>Paste the JSON output</h2>
+    <p style="font-size:13px;color:var(--text-dim);margin-top:0;">
+      Paste the entire JSON the terminal printed. The page will parse it locally —
+      nothing is sent anywhere yet.
+    </p>
+    <textarea id="jsonInput" placeholder='{ "resources": [ ... ] }'></textarea>
+    <button id="btnAnalyze">Analyze</button>
+  </div>
+
+  <!-- Step 3: Review -->
   <div class="card" id="resultsCard" style="display:none;">
-    <h2>Step 2 — Review</h2>
+    <h2><span class="step-num">3</span>Review</h2>
     <div class="stat-row">
       <div class="stat ok">
         <div class="stat-num" id="statTotal">0</div>
@@ -178,10 +245,9 @@
       </div>
     </div>
     <button id="btnImport" disabled>Import missing rows</button>
-    <button id="btnReload" class="secondary">Re-scan</button>
   </div>
 
-  <!-- Step 3: Log -->
+  <!-- Step 4: Log -->
   <div class="card" id="logCard" style="display:none;">
     <h2>Activity log</h2>
     <div class="log" id="log"></div>
@@ -190,35 +256,70 @@
 </main>
 
 <script>
-  // ─────────────────────────────────────────────────────────────────────────
-  //  CONFIG — Supabase
-  // ─────────────────────────────────────────────────────────────────────────
   const SUPABASE_URL = "https://tahyfwvlnlufqkzknbcm.supabase.co";
   const SUPABASE_KEY = "sb_publishable_VPkvLBuf_p8ltI4LH0bTuw_PHp6rLYn";
 
-  // ─────────────────────────────────────────────────────────────────────────
-  //  Credential persistence (sessionStorage = clears on tab close)
-  // ─────────────────────────────────────────────────────────────────────────
   const $ = (id) => document.getElementById(id);
-  const fields = ["cloudName", "apiKey", "apiSecret", "prefix"];
-  fields.forEach((id) => {
-    const saved = sessionStorage.getItem("bf_" + id);
+
+  // Persist cloud name + prefix only (not the secret) across reloads.
+  ["cloudName", "prefix"].forEach((id) => {
+    const saved = localStorage.getItem("bf_" + id);
     if (saved) $(id).value = saved;
     $(id).addEventListener("input", () =>
-      sessionStorage.setItem("bf_" + id, $(id).value)
+      localStorage.setItem("bf_" + id, $(id).value)
     );
   });
-  $("btnClearCreds").onclick = () => {
-    fields.forEach((id) => {
-      sessionStorage.removeItem("bf_" + id);
-      if (id !== "cloudName" && id !== "prefix") $(id).value = "";
+
+  // ─── Build the curl command live as user types ───────────────────────────
+  function buildCommand() {
+    const cloud  = $("cloudName").value.trim() || "<CLOUD>";
+    const key    = $("apiKey").value.trim() || "<API_KEY>";
+    const secret = $("apiSecret").value.trim() || "<API_SECRET>";
+    const prefix = $("prefix").value.trim() || "call_recordings";
+
+    // PowerShell + bash both accept curl with -u key:secret on Windows 10+,
+    // macOS, and Linux. (Windows PowerShell aliases curl to Invoke-WebRequest
+    // which doesn't accept -u, so we add a PowerShell-native alternative.)
+    const url = `https://api.cloudinary.com/v1_1/${cloud}/resources/video?prefix=${prefix}&max_results=500`;
+
+    // Bash / macOS / Linux / Git Bash on Windows
+    const bashCmd = `curl -u "${key}:${secret}" "${url}"`;
+
+    // Windows PowerShell native (handles auth differently)
+    const psCmd = `$creds = "${key}:${secret}"
+$auth  = "Basic " + [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($creds))
+Invoke-RestMethod -Uri "${url}" -Headers @{ Authorization = $auth } | ConvertTo-Json -Depth 10`;
+
+    return { bashCmd, psCmd };
+  }
+
+  function refreshCmdBox() {
+    const { bashCmd, psCmd } = buildCommand();
+    $("cmdBox").innerHTML =
+      `<strong style="color:#e91e63;">Bash / Mac / Linux / Git Bash:</strong>\n` +
+      `${escapeHtml(bashCmd)}\n\n` +
+      `<strong style="color:#e91e63;">Windows PowerShell:</strong>\n` +
+      `${escapeHtml(psCmd)}`;
+  }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[c]));
+  }
+  ["cloudName", "apiKey", "apiSecret", "prefix"].forEach((id) =>
+    $(id).addEventListener("input", refreshCmdBox)
+  );
+  refreshCmdBox();
+
+  $("btnCopy").onclick = () => {
+    const { bashCmd } = buildCommand();
+    navigator.clipboard.writeText(bashCmd).then(() => {
+      $("btnCopy").textContent = "Copied!";
+      setTimeout(() => ($("btnCopy").textContent = "Copy command"), 1500);
     });
-    log("Credentials cleared.", "dim");
   };
 
-  // ─────────────────────────────────────────────────────────────────────────
-  //  Logging
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─── Logging ─────────────────────────────────────────────────────────────
   const logEl = $("log");
   function log(msg, cls = "") {
     $("logCard").style.display = "";
@@ -230,37 +331,55 @@
   }
   function clearLog() { logEl.innerHTML = ""; }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  //  Cloudinary listing (paginated)
-  // ─────────────────────────────────────────────────────────────────────────
-  async function listCloudinaryResources(cloud, key, secret, prefix) {
-    const auth = "Basic " + btoa(`${key}:${secret}`);
-    let cursor = null;
-    const all = [];
-    let page = 0;
-    do {
-      page++;
-      const url = new URL(`https://api.cloudinary.com/v1_1/${cloud}/resources/video`);
-      url.searchParams.set("prefix", prefix);
-      url.searchParams.set("max_results", "500");
-      if (cursor) url.searchParams.set("next_cursor", cursor);
+  // ─── Parse JSON, fetch existing rows from Supabase, compute diff ─────────
+  let pendingResources = [];
 
-      log(`→ Fetching page ${page}…`, "dim");
-      const res = await fetch(url, { headers: { Authorization: auth } });
-      if (!res.ok) {
-        const body = await res.text();
-        throw new Error(`Cloudinary ${res.status}: ${body}`);
-      }
-      const data = await res.json();
-      all.push(...(data.resources || []));
-      cursor = data.next_cursor || null;
-    } while (cursor);
-    return all;
-  }
+  $("btnAnalyze").onclick = async () => {
+    clearLog();
+    pendingResources = [];
+    $("btnImport").disabled = true;
+    $("resultsCard").style.display = "";
 
-  // ─────────────────────────────────────────────────────────────────────────
-  //  Supabase — fetch existing cloudinary_urls
-  // ─────────────────────────────────────────────────────────────────────────
+    let parsed;
+    try {
+      parsed = JSON.parse($("jsonInput").value);
+    } catch (e) {
+      log("✗ Could not parse JSON: " + e.message, "err");
+      log("Make sure you pasted the full output of the curl command, including the outer braces.", "dim");
+      return;
+    }
+    const resources = parsed.resources || parsed;
+    if (!Array.isArray(resources)) {
+      log("✗ JSON does not contain a 'resources' array. Did you paste the right output?", "err");
+      return;
+    }
+    log(`✓ Parsed ${resources.length} Cloudinary resource(s).`, "ok");
+
+    log("Fetching existing Supabase rows…", "dim");
+    let existing;
+    try {
+      existing = await fetchExistingUrls();
+      log(`✓ ${existing.size} row(s) already in Supabase.`, "ok");
+    } catch (e) {
+      log("✗ Supabase read failed: " + e.message, "err");
+      return;
+    }
+
+    const missing = resources.filter((r) => !existing.has(r.secure_url));
+    pendingResources = missing;
+
+    $("statTotal").textContent    = resources.length;
+    $("statExisting").textContent = resources.length - missing.length;
+    $("statMissing").textContent  = missing.length;
+    $("btnImport").disabled       = missing.length === 0;
+
+    if (missing.length === 0) {
+      log("Nothing to import — every Cloudinary file already has a Supabase row.", "ok");
+    } else {
+      log(`${missing.length} file(s) ready to import. Click "Import missing rows".`, "warn");
+    }
+  };
+
   async function fetchExistingUrls() {
     const url = `${SUPABASE_URL}/rest/v1/recordings?select=cloudinary_url&limit=10000`;
     const res = await fetch(url, {
@@ -274,43 +393,34 @@
     return new Set(rows.map((r) => r.cloudinary_url).filter(Boolean));
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  //  Filename parsing
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─── Filename parsing ────────────────────────────────────────────────────
   function parseFilename(publicId, createdAt) {
-    // publicId looks like: call_recordings/9571091011(9571091011)_20260425175840
-    const base = publicId.split("/").pop() || publicId;
-
-    // Phone number: first run of 7-15 digits (allowing optional +)
+    const base = (publicId.split("/").pop() || publicId);
     const numMatch = base.match(/(\+?\d{7,15})/);
     const number = numMatch ? numMatch[1] : "Unknown";
 
-    // Direction marker
     const upper = base.toUpperCase();
     let direction = "UNKNOWN";
-    if (upper.startsWith("INCOMING") || upper.includes("_IN_") || upper.includes("INCOMING_")) direction = "INCOMING";
-    else if (upper.startsWith("OUTGOING") || upper.includes("_OUT_") || upper.includes("OUTGOING_")) direction = "OUTGOING";
+    if (upper.startsWith("INCOMING") || upper.includes("INCOMING_") || upper.includes("_IN_")) direction = "INCOMING";
+    else if (upper.startsWith("OUTGOING") || upper.includes("OUTGOING_") || upper.includes("_OUT_")) direction = "OUTGOING";
 
-    // Timestamp YYYYMMDDhhmmss anywhere in the name
     const tsMatch = base.match(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/);
-    let recordedAt = createdAt; // fall back to Cloudinary upload time
+    let recordedAt = createdAt;
     if (tsMatch) {
       const [, yr, mo, dy, hr, mn, sc] = tsMatch;
       const iso = `${yr}-${mo}-${dy}T${hr}:${mn}:${sc}Z`;
       const d = new Date(iso);
       if (!isNaN(d.getTime())) recordedAt = iso;
     }
-
     return { number, direction, recordedAt };
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  //  Insert one row
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─── Insert one row ──────────────────────────────────────────────────────
   async function insertRow(resource) {
     const meta = parseFilename(resource.public_id, resource.created_at);
-    const fileName = (resource.public_id.split("/").pop() || resource.public_id) +
-                     (resource.format ? `.${resource.format}` : "");
+    const fileName =
+      (resource.public_id.split("/").pop() || resource.public_id) +
+      (resource.format ? `.${resource.format}` : "");
     const body = {
       file_name:      fileName,
       cloudinary_url: resource.secure_url,
@@ -335,58 +445,7 @@
     if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  //  Scan flow
-  // ─────────────────────────────────────────────────────────────────────────
-  let pendingResources = []; // resources to import
-
-  $("btnScan").onclick = async () => {
-    clearLog();
-    pendingResources = [];
-    $("btnImport").disabled = true;
-    $("resultsCard").style.display = "";
-
-    const cloud  = $("cloudName").value.trim();
-    const key    = $("apiKey").value.trim();
-    const secret = $("apiSecret").value.trim();
-    const prefix = $("prefix").value.trim();
-    if (!cloud || !key || !secret) {
-      log("Enter cloud name, API key, and API secret first.", "err");
-      return;
-    }
-
-    try {
-      log("Listing Cloudinary resources…", "dim");
-      const resources = await listCloudinaryResources(cloud, key, secret, prefix);
-      log(`✓ Found ${resources.length} file(s) in Cloudinary.`, "ok");
-
-      log("Fetching existing Supabase rows…", "dim");
-      const existing = await fetchExistingUrls();
-      log(`✓ ${existing.size} row(s) already in Supabase.`, "ok");
-
-      const missing = resources.filter((r) => !existing.has(r.secure_url));
-      pendingResources = missing;
-
-      $("statTotal").textContent    = resources.length;
-      $("statExisting").textContent = resources.length - missing.length;
-      $("statMissing").textContent  = missing.length;
-      $("btnImport").disabled       = missing.length === 0;
-
-      if (missing.length === 0) {
-        log("Nothing to import — every Cloudinary file is already in Supabase.", "ok");
-      } else {
-        log(`${missing.length} file(s) ready to import. Click "Import missing rows".`, "warn");
-      }
-    } catch (e) {
-      log("✗ Scan failed: " + e.message, "err");
-    }
-  };
-
-  $("btnReload").onclick = () => $("btnScan").click();
-
-  // ─────────────────────────────────────────────────────────────────────────
-  //  Import flow
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─── Import flow ─────────────────────────────────────────────────────────
   $("btnImport").onclick = async () => {
     if (pendingResources.length === 0) return;
     $("btnImport").disabled = true;
@@ -404,7 +463,7 @@
       }
     }
     log(`\nDone — ${ok} inserted, ${fail} failed.`, fail ? "warn" : "ok");
-    log("Open the admin panel and refresh to see them: " +
+    log("Open the admin panel and refresh: " +
         location.origin + location.pathname.replace(/backfill\.html$/, ""), "dim");
   };
 </script>
