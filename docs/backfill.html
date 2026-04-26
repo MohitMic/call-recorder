@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Backfill Cloudinary → Supabase</title>
+<style>
+  :root {
+    --bg: #121212;
+    --card: #1e1e1e;
+    --card-hi: #2a2a2a;
+    --pink: #e91e63;
+    --text: #ffffff;
+    --text-dim: #a0a0a0;
+    --green: #4caf50;
+    --orange: #ff9800;
+    --red: #ef5350;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  header {
+    background: var(--card);
+    padding: 16px 24px;
+    border-bottom: 1px solid #2a2a2a;
+  }
+  header h1 { margin: 0; font-size: 20px; color: var(--pink); }
+  header p { margin: 4px 0 0; font-size: 13px; color: var(--text-dim); }
+  main {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 16px;
+  }
+  .card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .card h2 { margin: 0 0 12px; font-size: 16px; color: var(--pink); }
+  label {
+    display: block;
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+  input[type="text"], input[type="password"] {
+    width: 100%;
+    background: var(--card-hi);
+    color: var(--text);
+    border: 1px solid #333;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    margin-bottom: 12px;
+    font-family: inherit;
+  }
+  button {
+    background: var(--pink);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  button.secondary {
+    background: var(--card-hi);
+  }
+  button + button { margin-left: 8px; }
+  .stat-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .stat {
+    flex: 1;
+    min-width: 120px;
+    background: var(--card-hi);
+    border-radius: 8px;
+    padding: 12px;
+  }
+  .stat-num { font-size: 28px; font-weight: bold; }
+  .stat-label { font-size: 12px; color: var(--text-dim); }
+  .stat.ok .stat-num   { color: var(--green); }
+  .stat.miss .stat-num { color: var(--orange); }
+  .stat.fail .stat-num { color: var(--red); }
+  .log {
+    background: #0a0a0a;
+    border-radius: 6px;
+    padding: 12px;
+    font-family: ui-monospace, monospace;
+    font-size: 12px;
+    max-height: 400px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .log .ok   { color: var(--green); }
+  .log .warn { color: var(--orange); }
+  .log .err  { color: var(--red); }
+  .log .dim  { color: var(--text-dim); }
+  .warning {
+    background: #4a3a1a;
+    color: #ffd791;
+    padding: 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+  a { color: var(--pink); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🔄 Backfill Cloudinary → Supabase</h1>
+  <p>One-time tool to import existing Cloudinary recordings into the admin panel.</p>
+</header>
+
+<main>
+
+  <div class="warning">
+    <strong>Privacy:</strong> Your Cloudinary API secret is sent only to Cloudinary's servers
+    (api.cloudinary.com) for this scan. It's stored in this browser tab only (sessionStorage)
+    and is cleared when you close the tab. It never leaves your machine for any other destination.
+  </div>
+
+  <!-- Step 1: Credentials -->
+  <div class="card">
+    <h2>Step 1 — Cloudinary credentials</h2>
+    <p style="font-size:13px;color:var(--text-dim);margin-top:0;">
+      Get them from
+      <a href="https://console.cloudinary.com/settings/api-keys" target="_blank">
+        console.cloudinary.com/settings/api-keys
+      </a>.
+    </p>
+
+    <label>Cloud name</label>
+    <input id="cloudName" type="text" value="djrfmyimy" />
+
+    <label>API Key</label>
+    <input id="apiKey" type="text" placeholder="123456789012345" />
+
+    <label>API Secret</label>
+    <input id="apiSecret" type="password" placeholder="abc...XYZ" />
+
+    <label>Folder prefix (Cloudinary)</label>
+    <input id="prefix" type="text" value="call_recordings" />
+
+    <button id="btnScan">Scan Cloudinary</button>
+    <button id="btnClearCreds" class="secondary">Forget credentials</button>
+  </div>
+
+  <!-- Step 2: Results -->
+  <div class="card" id="resultsCard" style="display:none;">
+    <h2>Step 2 — Review</h2>
+    <div class="stat-row">
+      <div class="stat ok">
+        <div class="stat-num" id="statTotal">0</div>
+        <div class="stat-label">In Cloudinary</div>
+      </div>
+      <div class="stat ok">
+        <div class="stat-num" id="statExisting">0</div>
+        <div class="stat-label">Already imported</div>
+      </div>
+      <div class="stat miss">
+        <div class="stat-num" id="statMissing">0</div>
+        <div class="stat-label">To import</div>
+      </div>
+    </div>
+    <button id="btnImport" disabled>Import missing rows</button>
+    <button id="btnReload" class="secondary">Re-scan</button>
+  </div>
+
+  <!-- Step 3: Log -->
+  <div class="card" id="logCard" style="display:none;">
+    <h2>Activity log</h2>
+    <div class="log" id="log"></div>
+  </div>
+
+</main>
+
+<script>
+  // ─────────────────────────────────────────────────────────────────────────
+  //  CONFIG — Supabase
+  // ─────────────────────────────────────────────────────────────────────────
+  const SUPABASE_URL = "https://tahyfwvlnlufqkzknbcm.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_VPkvLBuf_p8ltI4LH0bTuw_PHp6rLYn";
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  Credential persistence (sessionStorage = clears on tab close)
+  // ─────────────────────────────────────────────────────────────────────────
+  const $ = (id) => document.getElementById(id);
+  const fields = ["cloudName", "apiKey", "apiSecret", "prefix"];
+  fields.forEach((id) => {
+    const saved = sessionStorage.getItem("bf_" + id);
+    if (saved) $(id).value = saved;
+    $(id).addEventListener("input", () =>
+      sessionStorage.setItem("bf_" + id, $(id).value)
+    );
+  });
+  $("btnClearCreds").onclick = () => {
+    fields.forEach((id) => {
+      sessionStorage.removeItem("bf_" + id);
+      if (id !== "cloudName" && id !== "prefix") $(id).value = "";
+    });
+    log("Credentials cleared.", "dim");
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  Logging
+  // ─────────────────────────────────────────────────────────────────────────
+  const logEl = $("log");
+  function log(msg, cls = "") {
+    $("logCard").style.display = "";
+    const span = document.createElement("div");
+    if (cls) span.className = cls;
+    span.textContent = msg;
+    logEl.appendChild(span);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+  function clearLog() { logEl.innerHTML = ""; }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  Cloudinary listing (paginated)
+  // ─────────────────────────────────────────────────────────────────────────
+  async function listCloudinaryResources(cloud, key, secret, prefix) {
+    const auth = "Basic " + btoa(`${key}:${secret}`);
+    let cursor = null;
+    const all = [];
+    let page = 0;
+    do {
+      page++;
+      const url = new URL(`https://api.cloudinary.com/v1_1/${cloud}/resources/video`);
+      url.searchParams.set("prefix", prefix);
+      url.searchParams.set("max_results", "500");
+      if (cursor) url.searchParams.set("next_cursor", cursor);
+
+      log(`→ Fetching page ${page}…`, "dim");
+      const res = await fetch(url, { headers: { Authorization: auth } });
+      if (!res.ok) {
+        const body = await res.text();
+        throw new Error(`Cloudinary ${res.status}: ${body}`);
+      }
+      const data = await res.json();
+      all.push(...(data.resources || []));
+      cursor = data.next_cursor || null;
+    } while (cursor);
+    return all;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  Supabase — fetch existing cloudinary_urls
+  // ─────────────────────────────────────────────────────────────────────────
+  async function fetchExistingUrls() {
+    const url = `${SUPABASE_URL}/rest/v1/recordings?select=cloudinary_url&limit=10000`;
+    const res = await fetch(url, {
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`,
+      },
+    });
+    if (!res.ok) throw new Error(`Supabase ${res.status}: ${await res.text()}`);
+    const rows = await res.json();
+    return new Set(rows.map((r) => r.cloudinary_url).filter(Boolean));
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  Filename parsing
+  // ─────────────────────────────────────────────────────────────────────────
+  function parseFilename(publicId, createdAt) {
+    // publicId looks like: call_recordings/9571091011(9571091011)_20260425175840
+    const base = publicId.split("/").pop() || publicId;
+
+    // Phone number: first run of 7-15 digits (allowing optional +)
+    const numMatch = base.match(/(\+?\d{7,15})/);
+    const number = numMatch ? numMatch[1] : "Unknown";
+
+    // Direction marker
+    const upper = base.toUpperCase();
+    let direction = "UNKNOWN";
+    if (upper.startsWith("INCOMING") || upper.includes("_IN_") || upper.includes("INCOMING_")) direction = "INCOMING";
+    else if (upper.startsWith("OUTGOING") || upper.includes("_OUT_") || upper.includes("OUTGOING_")) direction = "OUTGOING";
+
+    // Timestamp YYYYMMDDhhmmss anywhere in the name
+    const tsMatch = base.match(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/);
+    let recordedAt = createdAt; // fall back to Cloudinary upload time
+    if (tsMatch) {
+      const [, yr, mo, dy, hr, mn, sc] = tsMatch;
+      const iso = `${yr}-${mo}-${dy}T${hr}:${mn}:${sc}Z`;
+      const d = new Date(iso);
+      if (!isNaN(d.getTime())) recordedAt = iso;
+    }
+
+    return { number, direction, recordedAt };
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  Insert one row
+  // ─────────────────────────────────────────────────────────────────────────
+  async function insertRow(resource) {
+    const meta = parseFilename(resource.public_id, resource.created_at);
+    const fileName = (resource.public_id.split("/").pop() || resource.public_id) +
+                     (resource.format ? `.${resource.format}` : "");
+    const body = {
+      file_name:      fileName,
+      cloudinary_url: resource.secure_url,
+      number:         meta.number,
+      direction:      meta.direction,
+      recorded_at:    meta.recordedAt,
+      duration_ms:    Math.round((resource.duration || 0) * 1000),
+      source_used:    "BACKFILL",
+      device_id:      "backfill",
+      device_label:   "Backfill (pre-import)",
+    };
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/recordings`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  Scan flow
+  // ─────────────────────────────────────────────────────────────────────────
+  let pendingResources = []; // resources to import
+
+  $("btnScan").onclick = async () => {
+    clearLog();
+    pendingResources = [];
+    $("btnImport").disabled = true;
+    $("resultsCard").style.display = "";
+
+    const cloud  = $("cloudName").value.trim();
+    const key    = $("apiKey").value.trim();
+    const secret = $("apiSecret").value.trim();
+    const prefix = $("prefix").value.trim();
+    if (!cloud || !key || !secret) {
+      log("Enter cloud name, API key, and API secret first.", "err");
+      return;
+    }
+
+    try {
+      log("Listing Cloudinary resources…", "dim");
+      const resources = await listCloudinaryResources(cloud, key, secret, prefix);
+      log(`✓ Found ${resources.length} file(s) in Cloudinary.`, "ok");
+
+      log("Fetching existing Supabase rows…", "dim");
+      const existing = await fetchExistingUrls();
+      log(`✓ ${existing.size} row(s) already in Supabase.`, "ok");
+
+      const missing = resources.filter((r) => !existing.has(r.secure_url));
+      pendingResources = missing;
+
+      $("statTotal").textContent    = resources.length;
+      $("statExisting").textContent = resources.length - missing.length;
+      $("statMissing").textContent  = missing.length;
+      $("btnImport").disabled       = missing.length === 0;
+
+      if (missing.length === 0) {
+        log("Nothing to import — every Cloudinary file is already in Supabase.", "ok");
+      } else {
+        log(`${missing.length} file(s) ready to import. Click "Import missing rows".`, "warn");
+      }
+    } catch (e) {
+      log("✗ Scan failed: " + e.message, "err");
+    }
+  };
+
+  $("btnReload").onclick = () => $("btnScan").click();
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  Import flow
+  // ─────────────────────────────────────────────────────────────────────────
+  $("btnImport").onclick = async () => {
+    if (pendingResources.length === 0) return;
+    $("btnImport").disabled = true;
+
+    let ok = 0, fail = 0;
+    for (let i = 0; i < pendingResources.length; i++) {
+      const r = pendingResources[i];
+      try {
+        await insertRow(r);
+        ok++;
+        log(`✓ [${i + 1}/${pendingResources.length}] ${r.public_id}`, "ok");
+      } catch (e) {
+        fail++;
+        log(`✗ [${i + 1}/${pendingResources.length}] ${r.public_id}: ${e.message}`, "err");
+      }
+    }
+    log(`\nDone — ${ok} inserted, ${fail} failed.`, fail ? "warn" : "ok");
+    log("Open the admin panel and refresh to see them: " +
+        location.origin + location.pathname.replace(/backfill\.html$/, ""), "dim");
+  };
+</script>
+</body>
+</html>
