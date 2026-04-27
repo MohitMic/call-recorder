@@ -80,13 +80,19 @@ async function listAllCloudinary() {
 }
 
 // ── 2. Existing rows in Supabase ─────────────────────────────────────────────
-async function fetchExistingUrls() {
-  const url = `${SUPABASE_URL}/rest/v1/recordings?select=cloudinary_url&limit=10000`;
+// Returns a Map<cloudinary_url, { source_used }> so the caller knows which
+// rows were authored by a real phone (and shouldn't be overwritten).
+async function fetchExistingRows() {
+  const url = `${SUPABASE_URL}/rest/v1/recordings?select=cloudinary_url,source_used&limit=10000`;
   const res = await fetch(url, {
     headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
   });
   if (!res.ok) throw new Error(`Supabase ${res.status}: ${await res.text()}`);
-  return new Set((await res.json()).map((r) => r.cloudinary_url).filter(Boolean));
+  const map = new Map();
+  for (const r of await res.json()) {
+    if (r.cloudinary_url) map.set(r.cloudinary_url, { source_used: r.source_used });
+  }
+  return map;
 }
 
 // ── 3. Parse phone + timestamp + direction from filename ─────────────────────
@@ -297,12 +303,19 @@ async function updateRow(r) {
     console.log(`✓ Total in Cloudinary: ${resources.length}`);
 
     process.stdout.write("→ Reading existing Supabase rows… ");
-    const existing = await fetchExistingUrls();
+    const existing = await fetchExistingRows();
     console.log(`${existing.size} already in Supabase`);
 
     const toInsert = resources.filter((r) => !existing.has(r.secure_url));
-    const toUpdate = resources.filter((r) => existing.has(r.secure_url));
-    console.log(`→ ${toInsert.length} new to insert, ${toUpdate.length} existing to refresh\n`);
+    // Only refresh BACKFILL rows. Rows that came from a real phone upload
+    // (source_used !== "BACKFILL") have authoritative metadata — never
+    // overwrite them, regardless of what we can guess from filename.
+    const toUpdate = resources.filter((r) => {
+      const ex = existing.get(r.secure_url);
+      return ex && ex.source_used === "BACKFILL";
+    });
+    const skipped = resources.length - toInsert.length - toUpdate.length;
+    console.log(`→ ${toInsert.length} new to insert, ${toUpdate.length} existing BACKFILL rows to refresh, ${skipped} live-phone rows preserved\n`);
 
     let ok = 0, fail = 0;
 
