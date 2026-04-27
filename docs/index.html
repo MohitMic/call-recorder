@@ -145,7 +145,8 @@
   }
   td.number { font-weight: 600; }
   td.muted { color: var(--text-dim); }
-  td.mono { font-family: ui-monospace, monospace; font-size: 11px; color: var(--text-dim); max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  td.mono { font-family: ui-monospace, monospace; font-size: 11px; color: var(--text-dim); max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  td.file { font-size: 12px; color: var(--text); max-width: 380px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   .pill {
     display: inline-block;
@@ -250,8 +251,7 @@
   }
 
   @media (max-width: 700px) {
-    th.col-source, td.col-source,
-    th.col-file, td.col-file { display: none; }
+    th.col-source, td.col-source { display: none; }
     .filters input { min-width: 140px; flex: 1; }
   }
 </style>
@@ -310,12 +310,12 @@
           <thead>
             <tr>
               <th data-sort="recorded_at" class="col-date">Date / Time</th>
+              <th data-sort="file_name">File / Caller</th>
               <th data-sort="number">Number</th>
-              <th data-sort="direction">Direction</th>
+              <th data-sort="direction">Dir</th>
               <th data-sort="duration_ms">Duration</th>
               <th data-sort="device_label">Device</th>
               <th data-sort="source_used" class="col-source">Source</th>
-              <th data-sort="file_name" class="col-file">File</th>
               <th>Play</th>
             </tr>
           </thead>
@@ -490,17 +490,19 @@
     const dirLabel = dir === "INCOMING" ? "↓ IN" : dir === "OUTGOING" ? "↑ OUT" : "?";
     const dur = formatMs(r.duration_ms || 0);
     const playing = currentlyPlayingId === r.id ? "playing" : "";
+    // Strip extension from file_name for nicer display
+    const displayName = (r.file_name || "").replace(/\.[a-zA-Z0-9]+$/, "");
     return `
       <tr class="${playing}" data-id="${r.id}">
         <td>${escapeHtml(date)}</td>
-        <td class="number">${escapeHtml(r.number || "Unknown")}</td>
+        <td class="file" title="${escapeHtml(r.file_name || "")}">${escapeHtml(displayName || "—")}</td>
+        <td class="number">${escapeHtml(r.number && r.number !== "Unknown" ? r.number : "—")}</td>
         <td><span class="pill ${dirClass}">${dirLabel}</span></td>
         <td>${dur}</td>
         <td>${escapeHtml(r.device_label || "—")}</td>
         <td class="muted col-source">${escapeHtml(r.source_used || "—")}</td>
-        <td class="mono col-file" title="${escapeHtml(r.file_name || "")}">${escapeHtml(r.file_name || "—")}</td>
         <td>
-          <button class="play-btn" data-id="${r.id}" data-url="${escapeHtml(r.cloudinary_url || "")}" data-title="${escapeHtml((r.number || "Unknown") + " · " + (r.file_name || ""))}">▶</button>
+          <button class="play-btn" data-id="${r.id}" data-url="${escapeHtml(r.cloudinary_url || "")}" data-title="${escapeHtml(displayName || r.file_name || "")}">▶</button>
         </td>
       </tr>`;
   }

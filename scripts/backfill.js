@@ -82,8 +82,44 @@ function bestName(r) {
 
 function parseMeta(r) {
   const base = bestName(r);
-  const numMatch = base.match(/(\+?\d{7,15})/);
-  const number   = numMatch ? numMatch[1] : "Unknown";
+
+  // Try to find a phone number anywhere in the filename
+  const phoneMatch = base.match(/(\+?\d{7,15})/);
+
+  // Extract the "caller label" — everything before the trailing date stamp.
+  // Common OEM filename shapes we've seen:
+  //   "Arjun Ji (Sanju & Paravati) 2026-03-30 03-51-42"
+  //   "9571091011(9571091011)_20260425171748"
+  //   "+918107565674 2026-03-27 03-52-51"
+  //   "Bared Solar Narendra Pal Ji 2026-04-08 00-06-19"
+  let label = base;
+  const dateStrips = [
+    /[\s_]*\d{4}-\d{2}-\d{2}[\s_-]+\d{2}-\d{2}-\d{2}.*$/,  // "2026-03-30 03-51-42"
+    /[\s_]+\d{8}_\d{6}.*$/,                                  // "_20260425_171617"
+    /[\s_]*\d{14}.*$/,                                       // "_20260425171617" or "20260425171617"
+  ];
+  for (const re of dateStrips) {
+    const stripped = label.replace(re, "").trim();
+    if (stripped && stripped !== label) { label = stripped; break; }
+  }
+  // Drop trailing "_" or "-" leftover
+  label = label.replace(/[_\s-]+$/, "").trim();
+
+  // Decide what to display in the "caller" column:
+  //   • If we have a contact-name-shaped label → use the name as-is
+  //   • Else if we found a phone number → use it
+  //   • Else "Unknown"
+  const looksLikePureNumber = label && /^[+\d\s()_-]+$/.test(label);
+  let caller;
+  if (label && !looksLikePureNumber) {
+    caller = label; // e.g. "Arjun Ji (Sanju & Paravati)"
+  } else if (phoneMatch) {
+    caller = phoneMatch[1];
+  } else if (label) {
+    caller = label;
+  } else {
+    caller = "Unknown";
+  }
 
   const upper = base.toUpperCase();
   let direction = "UNKNOWN";
@@ -92,7 +128,8 @@ function parseMeta(r) {
   else if (upper.startsWith("OUTGOING") || upper.includes("OUTGOING_") || upper.includes("_OUT_"))
     direction = "OUTGOING";
 
-  const tsMatch = base.match(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/);
+  const tsMatch = base.match(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/) ||
+                  base.match(/(\d{4})-(\d{2})-(\d{2})[\s_-]+(\d{2})-(\d{2})-(\d{2})/);
   let recordedAt = r.created_at;
   if (tsMatch) {
     const [, y, m, d, h, mi, s] = tsMatch;
@@ -109,7 +146,7 @@ function parseMeta(r) {
   }
   if ((!duration || duration === 0) && r.video && r.video.duration) duration = r.video.duration;
   if ((!duration || duration === 0) && r.audio && r.audio.duration) duration = r.audio.duration;
-  return { number, direction, recordedAt, durationMs: Math.round((duration || 0) * 1000) };
+  return { number: caller, direction, recordedAt, durationMs: Math.round((duration || 0) * 1000) };
 }
 
 // ── 4. Build row body, then insert / update ──────────────────────────────────
