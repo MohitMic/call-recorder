@@ -25,6 +25,10 @@ const KEY           = process.env.CLOUDINARY_KEY;
 const SECRET        = process.env.CLOUDINARY_SECRET;
 const SUPABASE_URL  = process.env.SUPABASE_URL || "https://tahyfwvlnlufqkzknbcm.supabase.co";
 const SUPABASE_KEY  = process.env.SUPABASE_KEY  || "sb_publishable_VPkvLBuf_p8ltI4LH0bTuw_PHp6rLYn";
+// OEM filename timestamps are in the phone's local time. Default to IST since
+// the existing data was recorded in India. Override with PHONE_TZ_OFFSET="+05:30".
+// Format: "+HH:MM" or "-HH:MM".
+const PHONE_TZ_OFFSET = process.env.PHONE_TZ_OFFSET || "+05:30";
 
 if (!KEY || !SECRET) {
   console.error("ERROR: set CLOUDINARY_KEY and CLOUDINARY_SECRET environment variables.");
@@ -95,76 +99,130 @@ function bestName(r) {
   return r.display_name || r.original_filename || (r.public_id || "").split("/").pop() || "";
 }
 
+// ── Generic, robust filename parser ──────────────────────────────────────────
+// Strategy: find every plausible candidate (any digit run, any
+// date-with-separator pattern), validate each by constructing a Date and
+// checking it falls in a sane range. Pick whichever has the most fields
+// and lands in [2000, 2100). Falls back gracefully when nothing matches.
+//
+// Designed to handle arbitrary OEM naming — Xiaomi, Vivo, OnePlus, Samsung,
+// random apps — without needing to add a new pattern per device.
+function findRecordedAt(name, fallbackIso) {
+  const candidates = [];
+
+  // 1. Date-with-separators: "YYYY?MM?DD?HH?MM?SS"  with any non-digit between fields
+  //    Catches: "2026-04-25 17-58-40", "2026/04/25_17:58:40", "2026.04.25 17.58.40"
+  const sepRe = /(\d{4})\D(\d{1,2})\D(\d{1,2})\D(\d{1,2})\D(\d{1,2})\D(\d{1,2})/g;
+  let m;
+  while ((m = sepRe.exec(name)) !== null) {
+    candidates.push({ y: m[1], mo: m[2], d: m[3], h: m[4], mi: m[5], s: m[6], score: 6 });
+  }
+
+  // 2. Contiguous 14-digit YYYYMMDDHHMMSS — only if not part of a longer run
+  //    of digits (otherwise we'd latch onto phone numbers like 00919588259935)
+  const c14 = /(?<!\d)(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(?!\d)/g;
+  while ((m = c14.exec(name)) !== null) {
+    candidates.push({ y: m[1], mo: m[2], d: m[3], h: m[4], mi: m[5], s: m[6], score: 6 });
+  }
+
+  // 3. Contiguous 12-digit YYYYMMDDHHMM (no seconds)
+  const c12 = /(?<!\d)(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(?!\d)/g;
+  while ((m = c12.exec(name)) !== null) {
+    candidates.push({ y: m[1], mo: m[2], d: m[3], h: m[4], mi: m[5], s: "00", score: 5 });
+  }
+
+  // 4. Contiguous 8-digit YYYYMMDD
+  const c8 = /(?<!\d)(\d{4})(\d{2})(\d{2})(?!\d)/g;
+  while ((m = c8.exec(name)) !== null) {
+    candidates.push({ y: m[1], mo: m[2], d: m[3], h: "00", mi: "00", s: "00", score: 3 });
+  }
+
+  // 5. Date-only with separators: "YYYY-MM-DD"
+  const d8 = /(\d{4})\D(\d{1,2})\D(\d{1,2})/g;
+  while ((m = d8.exec(name)) !== null) {
+    candidates.push({ y: m[1], mo: m[2], d: m[3], h: "00", mi: "00", s: "00", score: 3 });
+  }
+
+  // Validate each candidate. A valid timestamp has a real Date and a year in
+  // a believable window (2000–2100). Prefer the highest-detail candidate;
+  // tie-break by appearing latest in the filename (timestamps usually come
+  // at the end, after caller name / phone).
+  let best = null;
+  for (const c of candidates) {
+    const y = +c.y, mo = +c.mo, d = +c.d, h = +c.h, mi = +c.mi, s = +c.s;
+    if (y < 2000 || y > 2099) continue;
+    if (mo < 1 || mo > 12) continue;
+    if (d < 1 || d > 31) continue;
+    if (h > 23 || mi > 59 || s > 59) continue;
+    const dt = new Date(Date.UTC(y, mo - 1, d, h, mi, s));
+    if (isNaN(dt.getTime())) continue;
+    // Sanity: must round-trip (catches "Feb 30")
+    if (dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d) continue;
+    // The values came from a phone-local timestamp in PHONE_TZ_OFFSET — emit
+    // an ISO string with that offset, so PostgreSQL stores the correct UTC
+    // moment and browsers display the original filename time when they're in
+    // the same timezone.
+    const pad = (n) => String(n).padStart(2, "0");
+    const iso = `${pad(y)}-${pad(mo)}-${pad(d)}T${pad(h)}:${pad(mi)}:${pad(s)}${PHONE_TZ_OFFSET}`;
+    if (!best || c.score > best.score) {
+      best = { ...c, iso, score: c.score };
+    }
+  }
+  return best ? best.iso : fallbackIso;
+}
+
+// ── Phone / caller extraction ────────────────────────────────────────────────
+// Pull every digit run that looks like a phone number (7–15 digits, optional +).
+// Whatever's left over (after stripping numbers + dates + separator junk) is
+// treated as a contact name. Returns whichever is more useful for display.
+function findPhoneAndCaller(name) {
+  // Strip all date-like chunks first so they don't pollute the "caller name"
+  let stripped = name;
+  // Date with separators
+  stripped = stripped.replace(/\d{4}\D\d{1,2}\D\d{1,2}\D\d{1,2}\D\d{1,2}\D\d{1,2}/g, " ");
+  stripped = stripped.replace(/\d{4}\D\d{1,2}\D\d{1,2}/g, " ");
+  // Contiguous date stamps
+  stripped = stripped.replace(/(?<!\d)\d{14}(?!\d)/g, " ");
+  stripped = stripped.replace(/(?<!\d)\d{12}(?!\d)/g, " ");
+  stripped = stripped.replace(/(?<!\d)\d{8}(?!\d)/g, " ");
+
+  // Phone number: any +?digit run of 7-15 digits in the ORIGINAL filename
+  const phoneMatches = [...name.matchAll(/(?<!\d)(\+?\d{7,15})(?!\d)/g)];
+  // De-prioritise sequences that overlap with a date-stamp position (we removed
+  // them in `stripped`, so any survivor is real).
+  let phoneNumber = null;
+  for (const pm of phoneMatches) {
+    if (stripped.includes(pm[1])) { phoneNumber = pm[1]; break; }
+  }
+
+  // Caller name: stripped filename minus the phone number, cleaned up
+  let caller = stripped;
+  if (phoneNumber) caller = caller.split(phoneNumber).join(" ");
+  caller = caller
+    .replace(/[()_]/g, " ")        // turn parens/underscores into spaces
+    .replace(/\s+/g, " ")           // collapse whitespace
+    .replace(/^[\s\-_,]+|[\s\-_,]+$/g, "")
+    .trim();
+
+  // If caller is empty or pure punctuation/digits, fall back to phone, then "Unknown"
+  if (!caller || /^[\s\-_,+\d]*$/.test(caller)) {
+    caller = phoneNumber || "Unknown";
+  }
+  return { caller, phoneNumber };
+}
+
 function parseMeta(r) {
   const base = bestName(r);
 
-  // Try to find a phone number anywhere in the filename
-  const phoneMatch = base.match(/(\+?\d{7,15})/);
+  const { caller } = findPhoneAndCaller(base);
+  const recordedAt = findRecordedAt(base, r.created_at);
 
-  // Extract the "caller label" — everything before the trailing date stamp.
-  // Common OEM filename shapes we've seen:
-  //   "Arjun Ji (Sanju & Paravati) 2026-03-30 03-51-42"
-  //   "9571091011(9571091011)_20260425171748"
-  //   "+918107565674 2026-03-27 03-52-51"
-  //   "Bared Solar Narendra Pal Ji 2026-04-08 00-06-19"
-  let label = base;
-  const dateStrips = [
-    /[\s_]*\d{4}-\d{2}-\d{2}[\s_-]+\d{2}-\d{2}-\d{2}.*$/,  // "2026-03-30 03-51-42"
-    /[\s_]+\d{8}_\d{6}.*$/,                                  // "_20260425_171617"
-    /[\s_]*\d{14}.*$/,                                       // "_20260425171617" or "20260425171617"
-  ];
-  for (const re of dateStrips) {
-    const stripped = label.replace(re, "").trim();
-    if (stripped && stripped !== label) { label = stripped; break; }
-  }
-  // Drop trailing "_" or "-" leftover
-  label = label.replace(/[_\s-]+$/, "").trim();
-
-  // Decide what to display in the "caller" column:
-  //   • If we have a contact-name-shaped label → use the name as-is
-  //   • Else if we found a phone number → use it
-  //   • Else "Unknown"
-  const looksLikePureNumber = label && /^[+\d\s()_-]+$/.test(label);
-  let caller;
-  if (label && !looksLikePureNumber) {
-    caller = label; // e.g. "Arjun Ji (Sanju & Paravati)"
-  } else if (phoneMatch) {
-    caller = phoneMatch[1];
-  } else if (label) {
-    caller = label;
-  } else {
-    caller = "Unknown";
-  }
-
-  const upper = base.toUpperCase();
   let direction = "UNKNOWN";
+  const upper = base.toUpperCase();
   if (upper.startsWith("INCOMING") || upper.includes("INCOMING_") || upper.includes("_IN_"))
     direction = "INCOMING";
   else if (upper.startsWith("OUTGOING") || upper.includes("OUTGOING_") || upper.includes("_OUT_"))
     direction = "OUTGOING";
-
-  // Date parsing: only accept timestamps that look like real dates.
-  // Year must be 19xx or 20xx, month 01-12, day 01-31, hour 00-23, etc.
-  // This avoids matching phone numbers like "00919588259935" as if they were
-  // 14-digit timestamps (which would yield month=95, day=88 → invalid).
-  // Try patterns in order of specificity:
-  //   1. "2026-04-25 17-58-40"  (separators)
-  //   2. "_20260425175840"      (underscore-prefixed contiguous)
-  //   3. "20260425175840"       (bare contiguous, search from end)
-  let recordedAt = r.created_at;
-  const patterns = [
-    /(?:^|[^\d])((?:19|20)\d{2})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])[\s_-]+([01]\d|2[0-3])-([0-5]\d)-([0-5]\d)/,
-    /(?:^|[^\d])((?:19|20)\d{2})(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])_([01]\d|2[0-3])([0-5]\d)([0-5]\d)/,
-    /(?:^|[^\d])((?:19|20)\d{2})(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])([01]\d|2[0-3])([0-5]\d)([0-5]\d)(?!\d)/,
-  ];
-  for (const re of patterns) {
-    const m = base.match(re);
-    if (m) {
-      const [, y, mo, d, h, mi, s] = m;
-      recordedAt = `${y}-${mo}-${d}T${h}:${mi}:${s}Z`;
-      break;
-    }
-  }
 
   // Cloudinary returns duration on most resources; some need media_metadata.duration
   let duration = r.duration;
