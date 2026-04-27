@@ -68,12 +68,50 @@ class FileUploader(
         }
 
         val cloudinaryUrl = uploadToCloudinary(file)
-        if (cloudinaryUrl != null) {
-            runCatching { insertMetadata(payload, cloudinaryUrl) }
-                .onFailure { Log.w(TAG, "Supabase metadata insert skipped: ${it.message}") }
+        if (cloudinaryUrl == null) {
+            Log.w(TAG, "Cloudinary upload failed — will retry")
+            return false
+        }
+
+        // If we already inserted a Supabase row for this URL, treat it as done
+        // (handles the case where Cloudinary upload succeeded on a previous run
+        // but Supabase failed and we're retrying).
+        val alreadyInSupabase = runCatching { existsInSupabase(cloudinaryUrl) }
+            .getOrDefault(false)
+        if (alreadyInSupabase) {
+            Log.i(TAG, "Supabase row already exists for $cloudinaryUrl")
             return true
         }
-        return false
+
+        val supabaseOk = runCatching { insertMetadata(payload, cloudinaryUrl) }
+            .getOrElse {
+                Log.w(TAG, "Supabase insert threw: ${it.message}")
+                false
+            }
+        if (!supabaseOk) {
+            Log.w(TAG, "Supabase insert failed — will retry. Cloudinary URL preserved: $cloudinaryUrl")
+            return false
+        }
+        return true
+    }
+
+    /** Returns true if a row with this cloudinary_url already exists in Supabase. */
+    private fun existsInSupabase(cloudinaryUrl: String): Boolean {
+        if (Config.SUPABASE_URL.isBlank() || Config.SUPABASE_KEY.isBlank()) return false
+        val encoded = java.net.URLEncoder.encode(cloudinaryUrl, "UTF-8")
+        val url = "${Config.SUPABASE_URL.trimEnd('/')}/rest/v1/recordings" +
+                  "?select=id&cloudinary_url=eq.$encoded&limit=1"
+        val request = Request.Builder()
+            .url(url)
+            .addHeader("apikey",        Config.SUPABASE_KEY)
+            .addHeader("Authorization", "Bearer ${Config.SUPABASE_KEY}")
+            .get()
+            .build()
+        return client.newCall(request).execute().use { resp ->
+            if (!resp.isSuccessful) return@use false
+            val body = resp.body?.string() ?: "[]"
+            body.trim() != "[]" && body.trim().isNotEmpty()
+        }
     }
 
     // ── Cloudinary multipart upload ───────────────────────────────────────────
@@ -156,7 +194,10 @@ class FileUploader(
 
         return client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
-                Log.w(TAG, "Supabase insert failed: ${response.code} ${response.message}")
+                val errBody = response.body?.string()
+                Log.w(TAG, "Supabase insert failed: HTTP ${response.code} ${response.message} — body=$errBody")
+            } else {
+                Log.i(TAG, "Supabase insert OK for ${File(payload.filePath).name}")
             }
             response.isSuccessful
         }
