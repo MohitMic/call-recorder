@@ -174,7 +174,7 @@ function findRecordedAt(name, fallbackIso) {
       best = { ...c, iso, score: c.score };
     }
   }
-  return best ? best.iso : fallbackIso;
+  return best ? best.iso : (fallbackIso || null);
 }
 
 // ── Phone / caller extraction ────────────────────────────────────────────────
@@ -221,7 +221,31 @@ function parseMeta(r) {
   const base = bestName(r);
 
   const { caller } = findPhoneAndCaller(base);
-  const recordedAt = findRecordedAt(base, r.created_at);
+
+  // Decide which time to store as recorded_at.
+  //
+  //   1. If the filename has a clear date that's MORE THAN 1 DAY older than
+  //      when Cloudinary received the upload → it's a historical recording
+  //      uploaded long after the call (e.g. backfill batch). The filename
+  //      date is the closest thing to truth we have, so use it.
+  //
+  //   2. Otherwise (parsed date == upload day, or no parseable date) → trust
+  //      Cloudinary's created_at. It's the moment the phone uploaded the
+  //      file, which for live calls is within seconds of the call ending,
+  //      and avoids the 12/24-hour ambiguity of OEM time-of-day strings
+  //      like "06-16-10" (6 AM vs 6 PM with no marker).
+  const filenameTimeIso = findRecordedAt(base, null);
+  let recordedAt = r.created_at;
+  if (filenameTimeIso) {
+    const filenameDate = new Date(filenameTimeIso);
+    const cloudDate    = new Date(r.created_at);
+    const ageMs        = cloudDate.getTime() - filenameDate.getTime();
+    const ONE_DAY      = 24 * 60 * 60 * 1000;
+    if (ageMs > ONE_DAY) {
+      recordedAt = filenameTimeIso;        // historical, trust the filename
+    }
+    // else: recent recording → keep Cloudinary's upload time (accurate)
+  }
 
   let direction = "UNKNOWN";
   const upper = base.toUpperCase();
