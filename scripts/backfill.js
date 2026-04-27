@@ -143,12 +143,27 @@ function parseMeta(r) {
   else if (upper.startsWith("OUTGOING") || upper.includes("OUTGOING_") || upper.includes("_OUT_"))
     direction = "OUTGOING";
 
-  const tsMatch = base.match(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/) ||
-                  base.match(/(\d{4})-(\d{2})-(\d{2})[\s_-]+(\d{2})-(\d{2})-(\d{2})/);
+  // Date parsing: only accept timestamps that look like real dates.
+  // Year must be 19xx or 20xx, month 01-12, day 01-31, hour 00-23, etc.
+  // This avoids matching phone numbers like "00919588259935" as if they were
+  // 14-digit timestamps (which would yield month=95, day=88 → invalid).
+  // Try patterns in order of specificity:
+  //   1. "2026-04-25 17-58-40"  (separators)
+  //   2. "_20260425175840"      (underscore-prefixed contiguous)
+  //   3. "20260425175840"       (bare contiguous, search from end)
   let recordedAt = r.created_at;
-  if (tsMatch) {
-    const [, y, m, d, h, mi, s] = tsMatch;
-    recordedAt = `${y}-${m}-${d}T${h}:${mi}:${s}Z`;
+  const patterns = [
+    /(?:^|[^\d])((?:19|20)\d{2})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])[\s_-]+([01]\d|2[0-3])-([0-5]\d)-([0-5]\d)/,
+    /(?:^|[^\d])((?:19|20)\d{2})(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])_([01]\d|2[0-3])([0-5]\d)([0-5]\d)/,
+    /(?:^|[^\d])((?:19|20)\d{2})(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])([01]\d|2[0-3])([0-5]\d)([0-5]\d)(?!\d)/,
+  ];
+  for (const re of patterns) {
+    const m = base.match(re);
+    if (m) {
+      const [, y, mo, d, h, mi, s] = m;
+      recordedAt = `${y}-${mo}-${d}T${h}:${mi}:${s}Z`;
+      break;
+    }
   }
 
   // Cloudinary returns duration on most resources; some need media_metadata.duration
