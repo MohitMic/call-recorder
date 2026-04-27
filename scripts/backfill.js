@@ -35,25 +35,36 @@ if (!KEY || !SECRET) {
 
 const auth = "Basic " + Buffer.from(`${KEY}:${SECRET}`).toString("base64");
 
-// ── 1. List every Cloudinary resource (paginated) ────────────────────────────
+// ── 1. List every Cloudinary resource via the Search API ─────────────────────
+// Search API returns duration + display_name in one call (the basic /resources
+// list endpoint omits both for video/audio assets uploaded via unsigned presets).
 async function listAllCloudinary() {
   let cursor = null;
   const all = [];
   let page = 0;
   do {
     page++;
-    const url = new URL(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/resources/video/upload`);
-    url.searchParams.set("prefix", PREFIX);
-    url.searchParams.set("max_results", "500");
-    url.searchParams.set("media_metadata", "true"); // returns duration
-    url.searchParams.set("context", "true");        // returns custom context
-    if (cursor) url.searchParams.set("next_cursor", cursor);
+    const body = {
+      expression:  `folder=${PREFIX}`,
+      max_results: 500,
+    };
+    if (cursor) body.next_cursor = cursor;
 
     process.stdout.write(`→ Fetching Cloudinary page ${page}… `);
-    const res = await fetch(url, { headers: { Authorization: auth } });
+    const res = await fetch(
+      `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/resources/search`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: auth,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      }
+    );
     if (!res.ok) {
-      const body = await res.text();
-      throw new Error(`Cloudinary ${res.status}: ${body}`);
+      const text = await res.text();
+      throw new Error(`Cloudinary ${res.status}: ${text}`);
     }
     const data = await res.json();
     const got = (data.resources || []).length;
@@ -77,7 +88,11 @@ async function fetchExistingUrls() {
 // ── 3. Parse phone + timestamp + direction from filename ─────────────────────
 // Pick the most useful name source: original_filename / display_name / public_id
 function bestName(r) {
-  return r.original_filename || r.display_name || (r.public_id || "").split("/").pop() || "";
+  // Cloudinary "display_name" is what the user/upload preset stored as the
+  // human-readable filename. For unsigned uploads, public_id is auto-generated
+  // (random IDs like "k0uunka2fxycuipcp5kr"), so display_name is the only
+  // meaningful name. Check it first.
+  return r.display_name || r.original_filename || (r.public_id || "").split("/").pop() || "";
 }
 
 function parseMeta(r) {
