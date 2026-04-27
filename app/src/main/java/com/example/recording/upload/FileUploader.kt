@@ -92,6 +92,19 @@ class FileUploader(
             Log.w(TAG, "Supabase insert failed — will retry. Cloudinary URL preserved: $cloudinaryUrl")
             return false
         }
+
+        // Final verification: SELECT the row back through the anon role —
+        // exactly the same path the admin panel uses to display recordings.
+        // Only mark this file as uploaded if the admin panel can actually see
+        // it. Catches the case where INSERT is allowed by RLS but SELECT isn't.
+        val visibleInAdmin = runCatching { existsInSupabase(cloudinaryUrl) }
+            .getOrDefault(false)
+        if (!visibleInAdmin) {
+            Log.w(TAG, "Inserted but not visible to anon SELECT — will retry. " +
+                "Check RLS policies on `recordings`. URL: $cloudinaryUrl")
+            return false
+        }
+        Log.i(TAG, "Verified row is visible in admin panel: $cloudinaryUrl")
         return true
     }
 

@@ -107,18 +107,23 @@ async function main() {
   const insertedRow = JSON.parse(inBody)[0];
   console.log(`    ✓ Supabase row created → id=${insertedRow.id}`);
 
-  // ── 4. Read it back ───────────────────────────────────────────────────────
-  console.log("[4/5] Reading row back to confirm visibility…");
+  // ── 4. Verify it's visible the way the admin panel sees it ────────────────
+  console.log("[4/5] Verifying admin-panel visibility (anon SELECT)…");
+  // Same query shape the admin panel uses: filter by cloudinary_url
   const readRes = await fetch(
-    `${SUPABASE_URL}/rest/v1/recordings?id=eq.${insertedRow.id}&select=*`,
+    `${SUPABASE_URL}/rest/v1/recordings?cloudinary_url=eq.${encodeURIComponent(cloudinaryUrl)}&select=*`,
     { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
   );
   const readJson = await readRes.json();
   if (readJson.length !== 1) {
-    console.error("    ✗ Row not visible to anon role:", readJson);
+    console.error("    ✗ Row NOT visible to anon role — admin panel won't show it.");
+    console.error("    This is exactly the case where the phone would now refuse to mark");
+    console.error("    the file as uploaded, and would retry. Fix the SELECT RLS policy.");
+    console.error("    Got:", readJson);
     process.exit(3);
   }
-  console.log(`    ✓ Row is readable: ${readJson[0].file_name} (${readJson[0].device_label})`);
+  console.log(`    ✓ Row is visible in admin: ${readJson[0].file_name} (${readJson[0].device_label})`);
+  console.log(`    → On phone, this is exactly when '.uploaded' marker would be written.`);
 
   // ── 5. Cleanup (or leave it for inspection) ───────────────────────────────
   if (CLEANUP) {
