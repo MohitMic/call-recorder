@@ -45,6 +45,8 @@ async function listAllCloudinary() {
     const url = new URL(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/resources/video/upload`);
     url.searchParams.set("prefix", PREFIX);
     url.searchParams.set("max_results", "500");
+    url.searchParams.set("media_metadata", "true"); // returns duration
+    url.searchParams.set("context", "true");        // returns custom context
     if (cursor) url.searchParams.set("next_cursor", cursor);
 
     process.stdout.write(`→ Fetching Cloudinary page ${page}… `);
@@ -73,8 +75,13 @@ async function fetchExistingUrls() {
 }
 
 // ── 3. Parse phone + timestamp + direction from filename ─────────────────────
-function parseMeta(publicId, createdAt) {
-  const base = publicId.split("/").pop() || publicId;
+// Pick the most useful name source: original_filename / display_name / public_id
+function bestName(r) {
+  return r.original_filename || r.display_name || (r.public_id || "").split("/").pop() || "";
+}
+
+function parseMeta(r) {
+  const base = bestName(r);
   const numMatch = base.match(/(\+?\d{7,15})/);
   const number   = numMatch ? numMatch[1] : "Unknown";
 
@@ -86,32 +93,67 @@ function parseMeta(publicId, createdAt) {
     direction = "OUTGOING";
 
   const tsMatch = base.match(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/);
-  let recordedAt = createdAt;
+  let recordedAt = r.created_at;
   if (tsMatch) {
     const [, y, m, d, h, mi, s] = tsMatch;
     recordedAt = `${y}-${m}-${d}T${h}:${mi}:${s}Z`;
   }
-  return { number, direction, recordedAt };
+
+  // Cloudinary returns duration on most resources; some need media_metadata.duration
+  let duration = r.duration;
+  if ((!duration || duration === 0) && r.media_metadata) {
+    const md = Array.isArray(r.media_metadata)
+      ? r.media_metadata.find((x) => x.key === "duration")
+      : null;
+    if (md) duration = parseFloat(md.value);
+  }
+  if ((!duration || duration === 0) && r.video && r.video.duration) duration = r.video.duration;
+  if ((!duration || duration === 0) && r.audio && r.audio.duration) duration = r.audio.duration;
+  return { number, direction, recordedAt, durationMs: Math.round((duration || 0) * 1000) };
 }
 
-// ── 4. Insert one row ────────────────────────────────────────────────────────
-async function insertRow(r) {
-  const meta = parseMeta(r.public_id, r.created_at);
-  const fileName =
-    (r.public_id.split("/").pop() || r.public_id) + (r.format ? `.${r.format}` : "");
-  const body = {
+// ── 4. Build row body, then insert / update ──────────────────────────────────
+function buildBody(r) {
+  const meta = parseMeta(r);
+  const fileName = bestName(r) + (r.format ? `.${r.format}` : "");
+  return {
     file_name:      fileName,
     cloudinary_url: r.secure_url,
     number:         meta.number,
     direction:      meta.direction,
     recorded_at:    meta.recordedAt,
-    duration_ms:    Math.round((r.duration || 0) * 1000),
+    duration_ms:    meta.durationMs,
     source_used:    "BACKFILL",
     device_id:      "backfill",
     device_label:   "Backfill (pre-import)",
   };
+}
+
+async function insertRow(r) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/recordings`, {
     method:  "POST",
+    headers: {
+      apikey:        SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+      "Content-Type": "application/json",
+      Prefer:        "return=minimal",
+    },
+    body: JSON.stringify(buildBody(r)),
+  });
+  if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+}
+
+async function updateRow(r) {
+  const url = `${SUPABASE_URL}/rest/v1/recordings?cloudinary_url=eq.${encodeURIComponent(r.secure_url)}`;
+  // Only patch the parsed/derived fields. Don't overwrite device_id /
+  // device_label / source_used on rows that came from real phones.
+  const body = buildBody(r);
+  delete body.device_id;
+  delete body.device_label;
+  delete body.source_used;
+  delete body.cloudinary_url; // it's the lookup key, no need to re-set
+  const res = await fetch(url, {
+    method:  "PATCH",
     headers: {
       apikey:        SUPABASE_KEY,
       Authorization: `Bearer ${SUPABASE_KEY}`,
@@ -131,29 +173,39 @@ async function insertRow(r) {
 
     process.stdout.write("→ Reading existing Supabase rows… ");
     const existing = await fetchExistingUrls();
-    console.log(`${existing.size} already imported`);
+    console.log(`${existing.size} already in Supabase`);
 
-    const missing = resources.filter((r) => !existing.has(r.secure_url));
-    console.log(`→ Missing: ${missing.length}\n`);
-
-    if (missing.length === 0) {
-      console.log("Nothing to do. All Cloudinary files are already in Supabase.");
-      return;
-    }
+    const toInsert = resources.filter((r) => !existing.has(r.secure_url));
+    const toUpdate = resources.filter((r) => existing.has(r.secure_url));
+    console.log(`→ ${toInsert.length} new to insert, ${toUpdate.length} existing to refresh\n`);
 
     let ok = 0, fail = 0;
-    for (let i = 0; i < missing.length; i++) {
-      const r = missing[i];
+
+    for (let i = 0; i < toInsert.length; i++) {
+      const r = toInsert[i];
       try {
         await insertRow(r);
         ok++;
-        console.log(`✓ [${i + 1}/${missing.length}] ${r.public_id}`);
+        console.log(`✓ INSERT [${i + 1}/${toInsert.length}] ${bestName(r)}`);
       } catch (e) {
         fail++;
-        console.log(`✗ [${i + 1}/${missing.length}] ${r.public_id} — ${e.message}`);
+        console.log(`✗ INSERT [${i + 1}/${toInsert.length}] ${bestName(r)} — ${e.message}`);
       }
     }
-    console.log(`\nDone — ${ok} inserted, ${fail} failed.`);
+
+    for (let i = 0; i < toUpdate.length; i++) {
+      const r = toUpdate[i];
+      try {
+        await updateRow(r);
+        ok++;
+        console.log(`↻ UPDATE [${i + 1}/${toUpdate.length}] ${bestName(r)}`);
+      } catch (e) {
+        fail++;
+        console.log(`✗ UPDATE [${i + 1}/${toUpdate.length}] ${bestName(r)} — ${e.message}`);
+      }
+    }
+
+    console.log(`\nDone — ${ok} processed, ${fail} failed.`);
     console.log("Open the admin panel to see them: https://mohitmic.github.io/call-recorder/");
   } catch (e) {
     console.error("FATAL:", e.message);

@@ -6,12 +6,14 @@
 <title>Call Recordings — Admin</title>
 <style>
   :root {
-    --bg: #121212;
-    --card: #1e1e1e;
-    --card-hi: #2a2a2a;
+    --bg: #0f1115;
+    --panel: #161922;
+    --panel-2: #1d2230;
+    --border: #2a2f3d;
     --pink: #e91e63;
+    --pink-soft: rgba(233,30,99,0.15);
     --text: #ffffff;
-    --text-dim: #a0a0a0;
+    --text-dim: #9aa3b2;
     --green: #4caf50;
     --orange: #ff9800;
     --red: #ef5350;
@@ -26,56 +28,185 @@
     min-height: 100vh;
   }
   header {
-    background: var(--card);
-    padding: 16px 24px;
-    border-bottom: 1px solid #2a2a2a;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 12px;
+    background: var(--panel);
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
     position: sticky;
     top: 0;
-    z-index: 10;
+    z-index: 20;
+  }
+  header .row1 {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
   }
   header h1 {
     margin: 0;
-    font-size: 20px;
+    font-size: 18px;
     color: var(--pink);
   }
-  .header-stats {
-    font-size: 13px;
+  .stats {
+    font-size: 12px;
     color: var(--text-dim);
   }
-  .controls {
+  .filters {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
+    align-items: center;
   }
-  .controls input, .controls select, .controls button {
-    background: var(--card-hi);
+  .filters input, .filters select, .filters button {
+    background: var(--panel-2);
     color: var(--text);
-    border: 1px solid #333;
+    border: 1px solid var(--border);
     padding: 8px 12px;
     border-radius: 6px;
     font-size: 13px;
+    font-family: inherit;
   }
-  .controls button {
-    cursor: pointer;
+  .filters input { min-width: 200px; }
+  .filters button {
     background: var(--pink);
     border-color: var(--pink);
+    cursor: pointer;
+    font-weight: 600;
   }
-  .controls button:hover { opacity: 0.9; }
-  main {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 16px;
+  .filters button.secondary {
+    background: var(--panel-2);
+    border-color: var(--border);
+    font-weight: normal;
   }
-  .status {
-    text-align: center;
+  .filters button:hover { opacity: 0.92; }
+
+  .player-bar {
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 20px;
+    display: none;
+    position: sticky;
+    top: 64px;
+    z-index: 19;
+  }
+  .player-bar.visible { display: block; }
+  .player-bar .title {
+    font-size: 12px;
     color: var(--text-dim);
-    padding: 48px 16px;
+    margin-bottom: 4px;
   }
+  audio { width: 100%; height: 36px; }
+
+  main {
+    padding: 16px 20px 80px;
+  }
+  .table-wrap {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .table-scroll {
+    overflow-x: auto;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  thead th {
+    background: var(--panel-2);
+    color: var(--text-dim);
+    font-weight: 600;
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  thead th:hover { color: var(--text); }
+  thead th .sort-ind {
+    color: var(--pink);
+    margin-left: 4px;
+  }
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+  tbody tr.playing { background: var(--pink-soft); }
+  tbody td {
+    padding: 10px 12px;
+    vertical-align: middle;
+  }
+  td.number { font-weight: 600; }
+  td.muted { color: var(--text-dim); }
+  td.mono { font-family: ui-monospace, monospace; font-size: 11px; color: var(--text-dim); max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .pill {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    letter-spacing: 0.5px;
+  }
+  .pill.in   { background: rgba(76,175,80,0.18);  color: var(--green); }
+  .pill.out  { background: rgba(66,165,245,0.18); color: var(--blue);  }
+  .pill.unk  { background: rgba(160,160,160,0.18); color: var(--text-dim); }
+
+  .play-btn {
+    background: var(--pink);
+    border: none;
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    flex-shrink: 0;
+    line-height: 32px;
+    padding: 0;
+  }
+  .play-btn:hover { opacity: 0.9; }
+
+  .pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--panel-2);
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .pagination button {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    margin: 0 2px;
+  }
+  .pagination button:disabled { opacity: 0.3; cursor: not-allowed; }
+  .pagination button.active {
+    background: var(--pink);
+    border-color: var(--pink);
+    font-weight: 600;
+  }
+  .pagination .info { color: var(--text-dim); }
+
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-dim);
+  }
+  .empty .icon { font-size: 40px; margin-bottom: 12px; }
   .error {
     background: #4a1a1a;
     color: #ffb4b4;
@@ -84,114 +215,27 @@
     margin-bottom: 16px;
     font-size: 13px;
   }
-  .card {
-    background: var(--card);
-    border-radius: 12px;
-    padding: 14px 16px;
-    margin-bottom: 10px;
-    display: flex;
-    gap: 12px;
-    align-items: center;
-  }
-  .card.playing {
-    border: 1px solid var(--pink);
-  }
-  .avatar {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    background: var(--card-hi);
-    color: var(--text);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    font-size: 14px;
-    flex-shrink: 0;
-  }
-  .info {
-    flex: 1;
-    min-width: 0;
-  }
-  .info-top {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 4px;
-    flex-wrap: wrap;
-  }
-  .name {
-    font-weight: 600;
-    font-size: 15px;
-  }
-  .pill {
-    font-size: 10px;
-    font-weight: 700;
-    padding: 2px 8px;
-    border-radius: 10px;
-    letter-spacing: 0.5px;
-  }
-  .pill.in   { background: rgba(76,175,80,0.2);  color: var(--green); }
-  .pill.out  { background: rgba(66,165,245,0.2); color: var(--blue);  }
-  .pill.unk  { background: rgba(160,160,160,0.2); color: var(--text-dim); }
-  .meta {
-    font-size: 12px;
-    color: var(--text-dim);
-  }
-  .source-tag {
-    font-family: monospace;
-    font-size: 10px;
-    background: var(--card-hi);
-    padding: 1px 6px;
-    border-radius: 4px;
-    color: var(--text-dim);
-    margin-left: 8px;
-  }
-  .play-btn {
-    background: var(--pink);
-    border: none;
-    color: white;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: 18px;
-    flex-shrink: 0;
-  }
-  .play-btn:hover { opacity: 0.9; }
-  .player-bar {
-    position: sticky;
-    top: 64px;
-    background: var(--card);
-    border-bottom: 1px solid #2a2a2a;
-    padding: 10px 16px;
-    z-index: 9;
-    display: none;
-  }
-  .player-bar.visible { display: block; }
-  .player-bar .title {
-    font-size: 13px;
-    color: var(--text-dim);
-    margin-bottom: 4px;
-  }
-  audio { width: 100%; }
+
+  /* Login */
   .login-box {
     max-width: 360px;
     margin: 80px auto;
-    background: var(--card);
-    padding: 24px;
+    background: var(--panel);
+    padding: 28px;
     border-radius: 12px;
+    border: 1px solid var(--border);
   }
   .login-box h2 { margin-top: 0; color: var(--pink); }
   .login-box input {
     width: 100%;
-    background: var(--card-hi);
+    background: var(--panel-2);
     color: var(--text);
-    border: 1px solid #333;
+    border: 1px solid var(--border);
     padding: 10px;
     border-radius: 6px;
     margin-bottom: 12px;
     font-size: 14px;
+    font-family: inherit;
   }
   .login-box button {
     width: 100%;
@@ -204,16 +248,17 @@
     font-weight: 600;
     cursor: pointer;
   }
-  .login-hint {
-    font-size: 12px;
-    color: var(--text-dim);
-    margin-top: 12px;
+
+  @media (max-width: 700px) {
+    th.col-source, td.col-source,
+    th.col-file, td.col-file { display: none; }
+    .filters input { min-width: 140px; flex: 1; }
   }
 </style>
 </head>
 <body>
 
-<!-- Login gate (very simple shared password, kept in-memory only) -->
+<!-- Login gate -->
 <div id="loginGate">
   <div class="login-box">
     <h2>Admin Sign-in</h2>
@@ -222,28 +267,30 @@
     </p>
     <input id="pwInput" type="password" placeholder="Password" />
     <button id="pwBtn">Unlock</button>
-    <div class="login-hint">
-      The password is set in <code>index.html</code> (constant <code>ADMIN_PASSWORD</code>). Change it before sharing the URL.
-    </div>
   </div>
 </div>
 
-<!-- Main app (hidden until logged in) -->
+<!-- Main app -->
 <div id="app" style="display:none;">
   <header>
-    <div>
+    <div class="row1">
       <h1>📞 Call Recordings</h1>
-      <div class="header-stats" id="stats">Loading…</div>
+      <div class="stats" id="stats">Loading…</div>
     </div>
-    <div class="controls">
-      <input id="searchInput" type="text" placeholder="Search number or name…" />
-      <select id="deviceFilter">
-        <option value="ALL">All devices</option>
-      </select>
+    <div class="filters">
+      <input id="searchInput" type="text" placeholder="Search number / file / device…" />
+      <select id="deviceFilter"><option value="ALL">All devices</option></select>
       <select id="dirFilter">
         <option value="ALL">All directions</option>
         <option value="INCOMING">Incoming</option>
         <option value="OUTGOING">Outgoing</option>
+        <option value="UNKNOWN">Unknown</option>
+      </select>
+      <select id="pageSize">
+        <option value="25">25 / page</option>
+        <option value="50" selected>50 / page</option>
+        <option value="100">100 / page</option>
+        <option value="250">250 / page</option>
       </select>
       <button id="refreshBtn">Refresh</button>
     </div>
@@ -255,43 +302,61 @@
   </div>
 
   <main>
-    <div id="status" class="status">Loading recordings…</div>
     <div id="errorBox" class="error" style="display:none;"></div>
-    <div id="list"></div>
+
+    <div class="table-wrap">
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th data-sort="recorded_at" class="col-date">Date / Time</th>
+              <th data-sort="number">Number</th>
+              <th data-sort="direction">Direction</th>
+              <th data-sort="duration_ms">Duration</th>
+              <th data-sort="device_label">Device</th>
+              <th data-sort="source_used" class="col-source">Source</th>
+              <th data-sort="file_name" class="col-file">File</th>
+              <th>Play</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <div class="pagination">
+        <div class="info" id="pageInfo"></div>
+        <div id="pageButtons"></div>
+      </div>
+    </div>
+
+    <div id="emptyState" class="empty" style="display:none;">
+      <div class="icon">🎙</div>
+      <div>No recordings match your filters.</div>
+    </div>
   </main>
 </div>
 
 <script>
-  // ─────────────────────────────────────────────────────────────────────────
-  //  CONFIG — edit these
-  // ─────────────────────────────────────────────────────────────────────────
-  const SUPABASE_URL = "https://tahyfwvlnlufqkzknbcm.supabase.co";
-  const SUPABASE_KEY = "sb_publishable_VPkvLBuf_p8ltI4LH0bTuw_PHp6rLYn";
+  // ─── CONFIG ──────────────────────────────────────────────────────────────
+  const SUPABASE_URL  = "https://tahyfwvlnlufqkzknbcm.supabase.co";
+  const SUPABASE_KEY  = "sb_publishable_VPkvLBuf_p8ltI4LH0bTuw_PHp6rLYn";
+  const ADMIN_PASSWORD = "admin123"; // change me before sharing
 
-  // Simple shared password (client-side only — change before sharing the URL).
-  // For real auth use Supabase Auth; this is a tiny gate to keep the URL
-  // from being browsed casually.
-  const ADMIN_PASSWORD = "admin123";
-
-  // ─────────────────────────────────────────────────────────────────────────
-
+  // ─── Login gate ──────────────────────────────────────────────────────────
   const loginGate = document.getElementById("loginGate");
   const app       = document.getElementById("app");
   const pwInput   = document.getElementById("pwInput");
   const pwBtn     = document.getElementById("pwBtn");
-
   function tryLogin() {
     if (pwInput.value === ADMIN_PASSWORD) {
       sessionStorage.setItem("adminUnlocked", "1");
       showApp();
     } else {
       pwInput.value = "";
-      pwInput.placeholder = "Wrong password — try again";
+      pwInput.placeholder = "Wrong password";
     }
   }
-  pwBtn.addEventListener("click", tryLogin);
+  pwBtn.onclick = tryLogin;
   pwInput.addEventListener("keydown", (e) => { if (e.key === "Enter") tryLogin(); });
-
   if (sessionStorage.getItem("adminUnlocked") === "1") showApp();
 
   function showApp() {
@@ -300,164 +365,269 @@
     loadRecordings();
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  //  Data
-  // ─────────────────────────────────────────────────────────────────────────
-  const listEl    = document.getElementById("list");
-  const statusEl  = document.getElementById("status");
-  const errorBox  = document.getElementById("errorBox");
-  const statsEl   = document.getElementById("stats");
-  const searchEl  = document.getElementById("searchInput");
-  const dirEl     = document.getElementById("dirFilter");
-  const deviceEl  = document.getElementById("deviceFilter");
-  const audioEl   = document.getElementById("audioEl");
-  const playerBar = document.getElementById("playerBar");
-  const playerTitle = document.getElementById("playerTitle");
-
+  // ─── State ────────────────────────────────────────────────────────────────
   let allRecordings = [];
+  let sortKey = "recorded_at";
+  let sortDir = "desc"; // "asc" | "desc"
+  let page = 0;
+  let pageSize = 50;
   let currentlyPlayingId = null;
 
-  async function loadRecordings() {
-    statusEl.style.display = "";
-    statusEl.textContent = "Loading recordings…";
-    errorBox.style.display = "none";
-    listEl.innerHTML = "";
+  const $ = (id) => document.getElementById(id);
+  const tbody = $("tbody");
+  const audioEl = $("audioEl");
+  const playerBar = $("playerBar");
+  const playerTitle = $("playerTitle");
 
+  // ─── Load ────────────────────────────────────────────────────────────────
+  async function loadRecordings() {
+    $("errorBox").style.display = "none";
+    $("stats").textContent = "Loading…";
     try {
       const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/recordings?select=*&order=recorded_at.desc&limit=500`,
-        {
-          headers: {
-            apikey: SUPABASE_KEY,
-            Authorization: `Bearer ${SUPABASE_KEY}`,
-          },
-        }
+        `${SUPABASE_URL}/rest/v1/recordings?select=*&order=recorded_at.desc&limit=10000`,
+        { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
       );
-      if (!res.ok) throw new Error(`Supabase error: ${res.status} ${await res.text()}`);
+      if (!res.ok) throw new Error(`Supabase ${res.status}: ${await res.text()}`);
       allRecordings = await res.json();
       populateDeviceFilter(allRecordings);
       const devCount = new Set(allRecordings.map(r => r.device_id || "unknown")).size;
-      statsEl.textContent = `${allRecordings.length} recording${allRecordings.length === 1 ? "" : "s"} from ${devCount} device${devCount === 1 ? "" : "s"}`;
+      $("stats").textContent =
+        `${allRecordings.length} recording${allRecordings.length === 1 ? "" : "s"} · ${devCount} device${devCount === 1 ? "" : "s"}`;
+      page = 0;
       render();
     } catch (e) {
-      statusEl.style.display = "none";
-      errorBox.style.display = "";
-      errorBox.textContent = "Failed to load: " + e.message + "\n\nMake sure the `recordings` table has a SELECT policy for the anon role.";
+      $("errorBox").style.display = "";
+      $("errorBox").textContent = "Failed to load: " + e.message;
     }
   }
 
   function populateDeviceFilter(recs) {
-    const seen = new Map(); // id -> label
+    const seen = new Map();
     recs.forEach(r => {
       const id = r.device_id || "unknown";
       if (!seen.has(id)) seen.set(id, r.device_label || "Unknown device");
     });
-    const prev = deviceEl.value;
-    deviceEl.innerHTML = '<option value="ALL">All devices</option>' +
+    const sel = $("deviceFilter");
+    const prev = sel.value;
+    sel.innerHTML = '<option value="ALL">All devices</option>' +
       Array.from(seen.entries())
         .sort((a, b) => a[1].localeCompare(b[1]))
-        .map(([id, label]) => `<option value="${escapeHtml(id)}">${escapeHtml(label)}</option>`)
+        .map(([id, label]) => `<option value="${escapeHtml(id)}">${escapeHtml(label)} (${recs.filter(r => (r.device_id || 'unknown') === id).length})</option>`)
         .join("");
-    if (prev && Array.from(deviceEl.options).some(o => o.value === prev)) {
-      deviceEl.value = prev;
-    }
+    if (prev && Array.from(sel.options).some(o => o.value === prev)) sel.value = prev;
   }
 
-  function render() {
-    const q = searchEl.value.trim().toLowerCase();
-    const dir = dirEl.value;
-    const dev = deviceEl.value;
-
-    const filtered = allRecordings.filter((r) => {
-      if (dir !== "ALL" && (r.direction || "").toUpperCase() !== dir) return false;
+  // ─── Filter + sort + paginate ────────────────────────────────────────────
+  function filtered() {
+    const q = $("searchInput").value.trim().toLowerCase();
+    const dir = $("dirFilter").value;
+    const dev = $("deviceFilter").value;
+    return allRecordings.filter((r) => {
+      if (dir !== "ALL" && (r.direction || "UNKNOWN").toUpperCase() !== dir) return false;
       if (dev !== "ALL" && (r.device_id || "unknown") !== dev) return false;
       if (q) {
-        const hay = `${r.number || ""} ${r.file_name || ""} ${r.device_label || ""}`.toLowerCase();
+        const hay = `${r.number || ""} ${r.file_name || ""} ${r.device_label || ""} ${r.source_used || ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
     });
+  }
 
-    if (filtered.length === 0) {
-      statusEl.style.display = "";
-      statusEl.textContent = allRecordings.length === 0
-        ? "No recordings yet. Make a call on the Android app."
-        : "No recordings match your filters.";
-      listEl.innerHTML = "";
-      return;
-    }
-    statusEl.style.display = "none";
-    listEl.innerHTML = filtered.map(renderCard).join("");
-
-    // Wire play buttons
-    document.querySelectorAll(".play-btn").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        const id = btn.dataset.id;
-        const url = btn.dataset.url;
-        const title = btn.dataset.title;
-        if (!url) {
-          alert("No Cloudinary URL for this recording.");
-          return;
-        }
-        if (currentlyPlayingId === id) {
-          audioEl.paused ? audioEl.play() : audioEl.pause();
-          return;
-        }
-        currentlyPlayingId = id;
-        playerBar.classList.add("visible");
-        playerTitle.textContent = title;
-        audioEl.src = url;
-        audioEl.play().catch(() => {});
-        document.querySelectorAll(".card").forEach(c => c.classList.remove("playing"));
-        btn.closest(".card").classList.add("playing");
-      });
+  function sorted(rows) {
+    const key = sortKey, dir = sortDir === "asc" ? 1 : -1;
+    return rows.slice().sort((a, b) => {
+      let av = a[key], bv = b[key];
+      if (av == null) av = "";
+      if (bv == null) bv = "";
+      if (key === "duration_ms") { av = +av || 0; bv = +bv || 0; }
+      else if (key === "recorded_at") { av = new Date(av).getTime() || 0; bv = new Date(bv).getTime() || 0; }
+      else { av = String(av).toLowerCase(); bv = String(bv).toLowerCase(); }
+      if (av < bv) return -1 * dir;
+      if (av > bv) return  1 * dir;
+      return 0;
     });
   }
 
-  function renderCard(r) {
-    const name = r.number || "Unknown";
-    const initials = (name.match(/[A-Za-z0-9]/g) || ["?"]).slice(0, 2).join("").toUpperCase();
+  function render() {
+    const rows = sorted(filtered());
+    const total = rows.length;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    if (page >= totalPages) page = totalPages - 1;
+    if (page < 0) page = 0;
+    const start = page * pageSize;
+    const slice = rows.slice(start, start + pageSize);
+
+    if (total === 0) {
+      tbody.innerHTML = "";
+      $("emptyState").style.display = "";
+    } else {
+      $("emptyState").style.display = "none";
+      tbody.innerHTML = slice.map(rowHtml).join("");
+      // wire play buttons
+      tbody.querySelectorAll(".play-btn").forEach((btn) => {
+        btn.addEventListener("click", () => onPlay(btn));
+      });
+    }
+
+    // pagination info
+    const startNum = total === 0 ? 0 : start + 1;
+    const endNum   = Math.min(start + pageSize, total);
+    $("pageInfo").textContent = `${startNum}–${endNum} of ${total}`;
+    renderPageButtons(totalPages);
+    renderSortIndicators();
+  }
+
+  function rowHtml(r) {
+    const date = r.recorded_at
+      ? new Date(r.recorded_at).toLocaleString(undefined, {
+          year: "numeric", month: "short", day: "numeric",
+          hour: "2-digit", minute: "2-digit",
+        })
+      : "—";
     const dir = (r.direction || "UNKNOWN").toUpperCase();
     const dirClass = dir === "INCOMING" ? "in" : dir === "OUTGOING" ? "out" : "unk";
     const dirLabel = dir === "INCOMING" ? "↓ IN" : dir === "OUTGOING" ? "↑ OUT" : "?";
-    const date = r.recorded_at ? new Date(r.recorded_at).toLocaleString(undefined, {
-      year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit"
-    }) : "";
     const dur = formatMs(r.duration_ms || 0);
-    const url = r.cloudinary_url || "";
-    const safeTitle = (name + " · " + (r.file_name || "")).replace(/"/g, "&quot;");
-
+    const playing = currentlyPlayingId === r.id ? "playing" : "";
     return `
-      <div class="card" data-id="${r.id}">
-        <div class="avatar">${escapeHtml(initials)}</div>
-        <div class="info">
-          <div class="info-top">
-            <span class="name">${escapeHtml(name)}</span>
-            <span class="pill ${dirClass}">${dirLabel}</span>
-            ${r.source_used ? `<span class="source-tag">${escapeHtml(r.source_used)}</span>` : ""}
-          </div>
-          <div class="meta">${escapeHtml(date)} · ${dur}${r.device_label ? ` · 📱 ${escapeHtml(r.device_label)}` : ""}</div>
-          <div class="meta" style="font-size:11px;opacity:0.7;">${escapeHtml(r.file_name || "")}</div>
-        </div>
-        <button class="play-btn" data-id="${r.id}" data-url="${escapeHtml(url)}" data-title="${safeTitle}" title="Play">▶</button>
-      </div>
-    `;
+      <tr class="${playing}" data-id="${r.id}">
+        <td>${escapeHtml(date)}</td>
+        <td class="number">${escapeHtml(r.number || "Unknown")}</td>
+        <td><span class="pill ${dirClass}">${dirLabel}</span></td>
+        <td>${dur}</td>
+        <td>${escapeHtml(r.device_label || "—")}</td>
+        <td class="muted col-source">${escapeHtml(r.source_used || "—")}</td>
+        <td class="mono col-file" title="${escapeHtml(r.file_name || "")}">${escapeHtml(r.file_name || "—")}</td>
+        <td>
+          <button class="play-btn" data-id="${r.id}" data-url="${escapeHtml(r.cloudinary_url || "")}" data-title="${escapeHtml((r.number || "Unknown") + " · " + (r.file_name || ""))}">▶</button>
+        </td>
+      </tr>`;
   }
 
+  function renderPageButtons(totalPages) {
+    const container = $("pageButtons");
+    container.innerHTML = "";
+    if (totalPages <= 1) return;
+
+    const mkBtn = (label, p, opts = {}) => {
+      const b = document.createElement("button");
+      b.textContent = label;
+      if (opts.active) b.classList.add("active");
+      if (opts.disabled) b.disabled = true;
+      else b.onclick = () => { page = p; render(); };
+      return b;
+    };
+    container.appendChild(mkBtn("‹ Prev", page - 1, { disabled: page === 0 }));
+
+    // numeric pages with ellipses
+    const pages = pageRange(page, totalPages);
+    pages.forEach((p) => {
+      if (p === "…") {
+        const span = document.createElement("span");
+        span.textContent = "…";
+        span.style.padding = "0 6px";
+        span.style.color = "var(--text-dim)";
+        container.appendChild(span);
+      } else {
+        container.appendChild(mkBtn(String(p + 1), p, { active: p === page }));
+      }
+    });
+
+    container.appendChild(mkBtn("Next ›", page + 1, { disabled: page >= totalPages - 1 }));
+  }
+  function pageRange(current, total) {
+    if (total <= 7) return Array.from({length: total}, (_, i) => i);
+    const result = new Set([0, total - 1, current]);
+    for (let d = 1; d <= 1; d++) {
+      if (current - d > 0) result.add(current - d);
+      if (current + d < total - 1) result.add(current + d);
+    }
+    const sorted = Array.from(result).sort((a, b) => a - b);
+    const out = [];
+    for (let i = 0; i < sorted.length; i++) {
+      if (i > 0 && sorted[i] - sorted[i - 1] > 1) out.push("…");
+      out.push(sorted[i]);
+    }
+    return out;
+  }
+
+  function renderSortIndicators() {
+    document.querySelectorAll("thead th[data-sort]").forEach((th) => {
+      const key = th.dataset.sort;
+      th.querySelector(".sort-ind")?.remove();
+      if (key === sortKey) {
+        const span = document.createElement("span");
+        span.className = "sort-ind";
+        span.textContent = sortDir === "asc" ? " ▲" : " ▼";
+        th.appendChild(span);
+      }
+    });
+  }
+
+  // ─── Sort header clicks ──────────────────────────────────────────────────
+  document.querySelectorAll("thead th[data-sort]").forEach((th) => {
+    th.addEventListener("click", () => {
+      const key = th.dataset.sort;
+      if (sortKey === key) {
+        sortDir = sortDir === "asc" ? "desc" : "asc";
+      } else {
+        sortKey = key;
+        sortDir = key === "recorded_at" ? "desc" : "asc";
+      }
+      page = 0;
+      render();
+    });
+  });
+
+  // ─── Filter changes ──────────────────────────────────────────────────────
+  ["searchInput", "deviceFilter", "dirFilter"].forEach((id) => {
+    $(id).addEventListener("input", () => { page = 0; render(); });
+  });
+  $("pageSize").addEventListener("change", () => {
+    pageSize = parseInt($("pageSize").value, 10);
+    page = 0;
+    render();
+  });
+  $("refreshBtn").addEventListener("click", loadRecordings);
+
+  // ─── Play button ─────────────────────────────────────────────────────────
+  function onPlay(btn) {
+    const id = btn.dataset.id;
+    const url = btn.dataset.url;
+    const title = btn.dataset.title;
+    if (!url) { alert("No Cloudinary URL on this row."); return; }
+    if (currentlyPlayingId === id) {
+      audioEl.paused ? audioEl.play() : audioEl.pause();
+      return;
+    }
+    currentlyPlayingId = id;
+    playerBar.classList.add("visible");
+    playerTitle.textContent = title;
+    audioEl.src = url;
+    audioEl.play().catch(() => {});
+    document.querySelectorAll("tbody tr").forEach(tr => tr.classList.remove("playing"));
+    btn.closest("tr")?.classList.add("playing");
+  }
+
+  // ─── Helpers ─────────────────────────────────────────────────────────────
   function formatMs(ms) {
+    if (!ms || ms <= 0) return "—";
     const s = Math.floor(ms / 1000);
-    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    if (m >= 60) {
+      const h = Math.floor(m / 60);
+      const mm = m % 60;
+      return `${h}:${String(mm).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+    }
+    return `${m}:${String(sec).padStart(2, "0")}`;
   }
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, (c) => ({
       "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
     }[c]));
   }
-
-  document.getElementById("refreshBtn").addEventListener("click", loadRecordings);
-  searchEl.addEventListener("input", render);
-  dirEl.addEventListener("change", render);
-  deviceEl.addEventListener("change", render);
 </script>
 </body>
 </html>
