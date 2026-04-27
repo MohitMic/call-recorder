@@ -303,7 +303,8 @@
         <table>
           <thead>
             <tr>
-              <th data-sort="recorded_at" class="col-date">Date / Time</th>
+              <th data-sort="uploaded_at" class="col-date">Uploaded</th>
+              <th data-sort="recorded_at" class="col-date">Call Time</th>
               <th data-sort="file_name">File / Caller</th>
               <th data-sort="number">Number</th>
               <th data-sort="duration_ms">Duration</th>
@@ -413,7 +414,7 @@
   }
 
   // ─── State ────────────────────────────────────────────────────────────────
-  let sortKey = "recorded_at";
+  let sortKey = "uploaded_at";
   let sortDir = "desc";       // "asc" | "desc"
   let page = 0;               // 0-based
   let pageSize = 50;
@@ -560,19 +561,25 @@
     renderSortIndicators();
   }
 
-  function rowHtml(r) {
-    const date = r.recorded_at
-      ? new Date(r.recorded_at).toLocaleString(undefined, {
+  function fmtDate(iso) {
+    return iso
+      ? new Date(iso).toLocaleString(undefined, {
           year: "numeric", month: "short", day: "numeric",
           hour: "2-digit", minute: "2-digit",
         })
       : "—";
+  }
+
+  function rowHtml(r) {
+    const uploaded = fmtDate(r.uploaded_at);
+    const recorded = fmtDate(r.recorded_at);
     const dur = formatMs(r.duration_ms || 0);
     const playing = currentlyPlayingId === r.id ? "playing" : "";
     const displayName = (r.file_name || "").replace(/\.[a-zA-Z0-9]+$/, "");
     return `
       <tr class="${playing}" data-id="${r.id}">
-        <td>${escapeHtml(date)}</td>
+        <td>${escapeHtml(uploaded)}</td>
+        <td class="muted">${escapeHtml(recorded)}</td>
         <td class="file" title="${escapeHtml(r.file_name || "")}">${escapeHtml(displayName || "—")}</td>
         <td class="number">${escapeHtml(r.number && r.number !== "Unknown" ? r.number : "—")}</td>
         <td>${dur}</td>
@@ -652,7 +659,8 @@
         sortDir = sortDir === "asc" ? "desc" : "asc";
       } else {
         sortKey = key;
-        sortDir = key === "recorded_at" ? "desc" : "asc";
+        // Date-like columns default to newest first
+        sortDir = (key === "recorded_at" || key === "uploaded_at") ? "desc" : "asc";
       }
       page = 0;
       loadPage();

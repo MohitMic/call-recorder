@@ -222,30 +222,13 @@ function parseMeta(r) {
 
   const { caller } = findPhoneAndCaller(base);
 
-  // Decide which time to store as recorded_at.
-  //
-  //   1. If the filename has a clear date that's MORE THAN 1 DAY older than
-  //      when Cloudinary received the upload → it's a historical recording
-  //      uploaded long after the call (e.g. backfill batch). The filename
-  //      date is the closest thing to truth we have, so use it.
-  //
-  //   2. Otherwise (parsed date == upload day, or no parseable date) → trust
-  //      Cloudinary's created_at. It's the moment the phone uploaded the
-  //      file, which for live calls is within seconds of the call ending,
-  //      and avoids the 12/24-hour ambiguity of OEM time-of-day strings
-  //      like "06-16-10" (6 AM vs 6 PM with no marker).
-  const filenameTimeIso = findRecordedAt(base, null);
-  let recordedAt = r.created_at;
-  if (filenameTimeIso) {
-    const filenameDate = new Date(filenameTimeIso);
-    const cloudDate    = new Date(r.created_at);
-    const ageMs        = cloudDate.getTime() - filenameDate.getTime();
-    const ONE_DAY      = 24 * 60 * 60 * 1000;
-    if (ageMs > ONE_DAY) {
-      recordedAt = filenameTimeIso;        // historical, trust the filename
-    }
-    // else: recent recording → keep Cloudinary's upload time (accurate)
-  }
+  // Two times, two truths:
+  //   recorded_at = when the call actually happened (parsed from filename;
+  //                 falls back to Cloudinary upload time only when filename
+  //                 has no parseable date at all)
+  //   uploaded_at = when the file reached Cloudinary (always r.created_at)
+  const recordedAt = findRecordedAt(base, r.created_at);
+  const uploadedAt = r.created_at;
 
   let direction = "UNKNOWN";
   const upper = base.toUpperCase();
@@ -264,7 +247,7 @@ function parseMeta(r) {
   }
   if ((!duration || duration === 0) && r.video && r.video.duration) duration = r.video.duration;
   if ((!duration || duration === 0) && r.audio && r.audio.duration) duration = r.audio.duration;
-  return { number: caller, direction, recordedAt, durationMs: Math.round((duration || 0) * 1000) };
+  return { number: caller, direction, recordedAt, uploadedAt, durationMs: Math.round((duration || 0) * 1000) };
 }
 
 // ── 4. Build row body, then insert / update ──────────────────────────────────
@@ -277,6 +260,7 @@ function buildBody(r) {
     number:         meta.number,
     direction:      meta.direction,
     recorded_at:    meta.recordedAt,
+    uploaded_at:    meta.uploadedAt,
     duration_ms:    meta.durationMs,
     source_used:    "BACKFILL",
     device_id:      "backfill",
