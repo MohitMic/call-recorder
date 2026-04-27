@@ -280,12 +280,6 @@
     <div class="filters">
       <input id="searchInput" type="text" placeholder="Search number / file / device…" />
       <select id="deviceFilter"><option value="ALL">All devices</option></select>
-      <select id="dirFilter">
-        <option value="ALL">All directions</option>
-        <option value="INCOMING">Incoming</option>
-        <option value="OUTGOING">Outgoing</option>
-        <option value="UNKNOWN">Unknown</option>
-      </select>
       <select id="pageSize">
         <option value="25">25 / page</option>
         <option value="50" selected>50 / page</option>
@@ -312,7 +306,6 @@
               <th data-sort="recorded_at" class="col-date">Date / Time</th>
               <th data-sort="file_name">File / Caller</th>
               <th data-sort="number">Number</th>
-              <th data-sort="direction">Dir</th>
               <th data-sort="duration_ms">Duration</th>
               <th data-sort="device_label">Device</th>
               <th data-sort="source_used" class="col-source">Source</th>
@@ -363,6 +356,60 @@
     loginGate.style.display = "none";
     app.style.display = "";
     loadDeviceFilter().then(loadPage);
+    // Auto-refresh every 30 seconds so new recordings appear without
+    // anyone clicking Refresh. Pauses while a recording is playing
+    // so the audio doesn't get interrupted by a re-render.
+    setInterval(() => {
+      if (currentlyPlayingId) return;
+      checkForNewRecordings();
+    }, 30_000);
+  }
+
+  // Lightweight check — just compare current total to last total
+  // and show a toast if something new arrived since the last view.
+  let lastSeenTotal = 0;
+  async function checkForNewRecordings() {
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/recordings?select=id&limit=1`,
+        {
+          headers: {
+            apikey:        SUPABASE_KEY,
+            Authorization: `Bearer ${SUPABASE_KEY}`,
+            Prefer:        "count=exact",
+          },
+        }
+      );
+      const cr = res.headers.get("Content-Range") || "";
+      const m = cr.match(/\/(\d+)$/);
+      const newTotal = m ? parseInt(m[1], 10) : 0;
+      if (lastSeenTotal && newTotal > lastSeenTotal) {
+        const diff = newTotal - lastSeenTotal;
+        showToast(`${diff} new recording${diff === 1 ? "" : "s"} — click to refresh`,
+          () => { lastSeenTotal = newTotal; loadDeviceFilter().then(loadPage); });
+      }
+      lastSeenTotal = newTotal;
+    } catch (_) { /* ignore */ }
+  }
+
+  function showToast(message, onClick) {
+    let toast = document.getElementById("toast");
+    if (!toast) {
+      toast = document.createElement("div");
+      toast.id = "toast";
+      toast.style.cssText =
+        "position:fixed;bottom:24px;left:50%;transform:translateX(-50%);" +
+        "background:var(--pink);color:white;padding:12px 20px;border-radius:24px;" +
+        "font-size:14px;font-weight:600;cursor:pointer;z-index:100;" +
+        "box-shadow:0 6px 20px rgba(0,0,0,0.4);transition:opacity 0.3s;";
+      document.body.appendChild(toast);
+    }
+    toast.textContent = "🔔 " + message;
+    toast.onclick = () => {
+      onClick && onClick();
+      toast.remove();
+    };
+    setTimeout(() => { if (toast) toast.style.opacity = "0.7"; }, 8000);
   }
 
   // ─── State ────────────────────────────────────────────────────────────────
@@ -391,8 +438,6 @@
     params.push(`order=${orderField}.${sortDir}.nullslast`);
 
     // Filters
-    const dir = $("dirFilter").value;
-    if (dir !== "ALL") params.push(`direction=eq.${encodeURIComponent(dir)}`);
     const dev = $("deviceFilter").value;
     if (dev !== "ALL") params.push(`device_id=eq.${encodeURIComponent(dev)}`);
 
@@ -480,6 +525,7 @@
     const cr = res.headers.get("Content-Range") || "";
     const totalMatch = cr.match(/\/(\d+)$/);
     totalRows = totalMatch ? parseInt(totalMatch[1], 10) : 0;
+    lastSeenTotal = totalRows; // baseline for the new-recording toast
     currentRows = await res.json();
 
     // If page went out of bounds (e.g. after filtering), clamp & retry.
@@ -521,19 +567,14 @@
           hour: "2-digit", minute: "2-digit",
         })
       : "—";
-    const dir = (r.direction || "UNKNOWN").toUpperCase();
-    const dirClass = dir === "INCOMING" ? "in" : dir === "OUTGOING" ? "out" : "unk";
-    const dirLabel = dir === "INCOMING" ? "↓ IN" : dir === "OUTGOING" ? "↑ OUT" : "?";
     const dur = formatMs(r.duration_ms || 0);
     const playing = currentlyPlayingId === r.id ? "playing" : "";
-    // Strip extension from file_name for nicer display
     const displayName = (r.file_name || "").replace(/\.[a-zA-Z0-9]+$/, "");
     return `
       <tr class="${playing}" data-id="${r.id}">
         <td>${escapeHtml(date)}</td>
         <td class="file" title="${escapeHtml(r.file_name || "")}">${escapeHtml(displayName || "—")}</td>
         <td class="number">${escapeHtml(r.number && r.number !== "Unknown" ? r.number : "—")}</td>
-        <td><span class="pill ${dirClass}">${dirLabel}</span></td>
         <td>${dur}</td>
         <td>${escapeHtml(r.device_label || "—")}</td>
         <td class="muted col-source">${escapeHtml(r.source_used || "—")}</td>
@@ -624,9 +665,7 @@
     clearTimeout(searchDebounce);
     searchDebounce = setTimeout(() => { page = 0; loadPage(); }, 300);
   });
-  ["deviceFilter", "dirFilter"].forEach((id) => {
-    $(id).addEventListener("change", () => { page = 0; loadPage(); });
-  });
+  $("deviceFilter").addEventListener("change", () => { page = 0; loadPage(); });
   $("pageSize").addEventListener("change", () => {
     pageSize = parseInt($("pageSize").value, 10);
     page = 0;
