@@ -42,7 +42,7 @@ async function listAllCloudinary() {
   let page = 0;
   do {
     page++;
-    const url = new URL(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/resources/video`);
+    const url = new URL(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/resources/video/upload`);
     url.searchParams.set("prefix", PREFIX);
     url.searchParams.set("max_results", "500");
     if (cursor) url.searchParams.set("next_cursor", cursor);
