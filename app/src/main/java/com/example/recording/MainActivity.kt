@@ -18,6 +18,11 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        // Schedule the periodic background sweep so recordings reach the
+        // admin panel even if the foreground service gets killed by the OEM.
+        // ExistingPeriodicWorkPolicy.KEEP — won't replace an existing schedule.
+        com.example.recording.upload.PeriodicSweepWorker.schedule(applicationContext)
+
         drawerLayout = findViewById(R.id.drawerLayout)
 
         // Default fragment on first create (no back stack entry — it's the root)
