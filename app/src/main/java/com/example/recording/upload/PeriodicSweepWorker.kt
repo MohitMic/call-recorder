@@ -12,6 +12,7 @@ import androidx.work.WorkerParameters
 import com.example.recording.AppPrefs
 import com.example.recording.AppPrefs.DeviceBrand
 import com.example.recording.model.UploadPayload
+import com.example.recording.watcher.OemFilenameParser
 import java.io.File
 import java.util.concurrent.TimeUnit
 
@@ -66,16 +67,15 @@ class PeriodicSweepWorker(
                 if (uploadedMark.exists()) return@forEach
                 if (file.length() == 0L) return@forEach
 
-                val phone = extractNumber(file.name) ?: "Unknown"
-                val timestamp = extractTimestamp(file.name) ?: file.lastModified()
+                val parsed = OemFilenameParser.parse(file.name, file.lastModified())
 
                 UploadWorker.enqueue(
                     context = ctx,
                     payload = UploadPayload(
                         filePath        = file.absolutePath,
-                        number          = phone,
+                        number          = parsed.caller,
                         direction       = "UNKNOWN",
-                        timestampMillis = timestamp,
+                        timestampMillis = parsed.timestampMs,
                         durationMillis  = 0L,
                         sourceUsed      = "OEM_NATIVE",
                     ),
@@ -94,29 +94,6 @@ class PeriodicSweepWorker(
                lower.endsWith(".amr") || lower.endsWith(".aac") ||
                lower.endsWith(".wav") || lower.endsWith(".ogg") ||
                lower.endsWith(".3gp") || lower.endsWith(".mp4")
-    }
-
-    private fun extractNumber(name: String): String? =
-        Regex("""(\+?\d{7,15})""").find(name)?.value
-
-    private fun extractTimestamp(name: String): Long? {
-        // YYYYMMDD_HHMMSS or YYYY-MM-DD-HH-MM-SS
-        val patterns = listOf(
-            Regex("""(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})"""),
-            Regex("""(\d{4})-(\d{2})-(\d{2})-(\d{2})-(\d{2})-(\d{2})"""),
-            Regex("""(\d{4})-(\d{2})-(\d{2}) (\d{2})-(\d{2})-(\d{2})"""),
-        )
-        for (p in patterns) {
-            val m = p.find(name) ?: continue
-            val (yr, mo, dy, hr, mn, sc) = m.destructured
-            return runCatching {
-                java.util.Calendar.getInstance().apply {
-                    set(yr.toInt(), mo.toInt() - 1, dy.toInt(), hr.toInt(), mn.toInt(), sc.toInt())
-                    set(java.util.Calendar.MILLISECOND, 0)
-                }.timeInMillis
-            }.getOrNull()
-        }
-        return null
     }
 
     companion object {
