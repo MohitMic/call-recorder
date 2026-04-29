@@ -188,20 +188,20 @@ class RecordingsFragment : Fragment(R.layout.fragment_recordings) {
             if (item.uploadStatus == UploadStatus.UPLOADED) return@forEach
             val file = item.file
             if (!file.exists() || file.length() == 0L) return@forEach
+            // Same generic parser as the live watcher and periodic worker.
+            val parsed = com.example.recording.watcher.OemFilenameParser.parse(
+                file.name, file.lastModified()
+            )
             val payload = com.example.recording.model.UploadPayload(
                 filePath        = file.absolutePath,
-                number          = item.report?.numberLabel ?: parsePhone(file.nameWithoutExtension) ?: "Unknown",
+                number          = item.report?.numberLabel?.takeIf { it.isNotBlank() } ?: parsed.caller,
                 direction       = item.direction,
-                timestampMillis = item.report?.startedAtMillis ?: file.lastModified(),
+                timestampMillis = item.report?.startedAtMillis ?: parsed.timestampMs,
                 durationMillis  = item.report?.durationMillis ?: 0L,
                 sourceUsed      = item.report?.audioSourceUsed ?: "OEM_NATIVE"
             )
             com.example.recording.upload.UploadWorker.enqueue(requireContext(), payload)
         }
-    }
-
-    private fun parsePhone(name: String): String? {
-        return Regex("""(\+?\d{7,15})""").find(name)?.value
     }
 
     // ── Folder status banner ──────────────────────────────────────────────────

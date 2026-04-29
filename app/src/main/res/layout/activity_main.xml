@@ -101,6 +101,7 @@
                     android:textSize="15sp" />
             </LinearLayout>
 
+            <!-- Setup / Dashboard hidden — not needed for now -->
             <LinearLayout
                 android:id="@+id/drawerItemDashboard"
                 android:layout_width="match_parent"
@@ -109,7 +110,8 @@
                 android:gravity="center_vertical"
                 android:paddingStart="24dp"
                 android:paddingEnd="24dp"
-                android:background="?attr/selectableItemBackground">
+                android:background="?attr/selectableItemBackground"
+                android:visibility="gone">
                 <ImageView
                     android:layout_width="22dp"
                     android:layout_height="22dp"
