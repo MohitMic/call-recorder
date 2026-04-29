@@ -129,66 +129,24 @@ class NativeRecordingWatcher(private val context: Context) {
             return
         }
 
-        // Parse metadata from filename — most OEMs embed timestamp and number.
-        // Fallback: use file last-modified and "Unknown" number.
-        val meta = parseOemFilename(file.name)
+        // Generic OEM-agnostic parser: handles Vivo (with parens + spaces),
+        // MIUI (underscores), OnePlus (mixed), and falls back gracefully.
+        val parsed = OemFilenameParser.parse(file.name, file.lastModified())
 
-        Log.i(TAG, "Enqueueing upload: ${file.name} " +
-            "number=${meta.number} direction=${meta.direction} ts=${meta.timestampMs}")
+        Log.i(TAG, "Enqueueing upload: ${file.name} → " +
+            "caller=${parsed.caller} phone=${parsed.phoneNumber} ts=${parsed.timestampMs}")
 
         UploadWorker.enqueue(
             context = context,
             payload = UploadPayload(
                 filePath        = file.absolutePath,
-                number          = meta.number,
-                direction       = meta.direction,
-                timestampMillis = meta.timestampMs,
+                number          = parsed.caller,
+                direction       = "UNKNOWN",
+                timestampMillis = parsed.timestampMs,
                 durationMillis  = 0L,
                 sourceUsed      = "OEM_NATIVE"
             )
         )
-    }
-
-    // ── Filename parsing ──────────────────────────────────────────────────────
-    //
-    // MIUI example:  +919876543210_20240418_112345.m4a
-    //                Call_2024-04-18-11-23-45_+919876543210.amr
-    // Vivo example:  20240418_112345_+919876543210.mp3
-    //                Record_112345_+919876543210.mp3
-    // Fallback:      file last-modified timestamp, number = "Unknown"
-
-    private data class FileMeta(val number: String, val direction: String, val timestampMs: Long)
-
-    private fun parseOemFilename(name: String): FileMeta {
-        val ts = extractTimestamp(name) ?: File("/storage/emulated/0").lastModified()
-            .takeIf { it > 0 } ?: System.currentTimeMillis()
-        val number = extractNumber(name) ?: "Unknown"
-        return FileMeta(number = number, direction = "UNKNOWN", timestampMs = ts)
-    }
-
-    private fun extractNumber(name: String): String? {
-        // Match phone numbers: optional + then 7-15 digits
-        val m = Regex("""(\+?\d{7,15})""").find(name) ?: return null
-        return m.value
-    }
-
-    private fun extractTimestamp(name: String): Long? {
-        // YYYYMMDD_HHMMSS or YYYY-MM-DD-HH-MM-SS
-        val patterns = listOf(
-            Regex("""(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})"""),
-            Regex("""(\d{4})-(\d{2})-(\d{2})-(\d{2})-(\d{2})-(\d{2})""")
-        )
-        for (p in patterns) {
-            val m = p.find(name) ?: continue
-            val (yr, mo, dy, hr, mn, sc) = m.destructured
-            return runCatching {
-                java.util.Calendar.getInstance().apply {
-                    set(yr.toInt(), mo.toInt() - 1, dy.toInt(), hr.toInt(), mn.toInt(), sc.toInt())
-                    set(java.util.Calendar.MILLISECOND, 0)
-                }.timeInMillis
-            }.getOrNull()
-        }
-        return null
     }
 
     private fun isAudioFile(name: String): Boolean {

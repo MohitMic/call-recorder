@@ -1,6 +1,13 @@
 package com.example.recording
 
+import android.annotation.SuppressLint
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
+import android.provider.Settings
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.view.GravityCompat
@@ -22,6 +29,11 @@ class MainActivity : AppCompatActivity() {
         // admin panel even if the foreground service gets killed by the OEM.
         // ExistingPeriodicWorkPolicy.KEEP — won't replace an existing schedule.
         com.example.recording.upload.PeriodicSweepWorker.schedule(applicationContext)
+
+        // Ask the user (once) to whitelist the app from battery optimization.
+        // Without this, OEM aggressive battery savers can still kill the
+        // periodic worker. Only one prompt — Android remembers their answer.
+        requestBatteryOptimizationExemption()
 
         drawerLayout = findViewById(R.id.drawerLayout)
 
@@ -64,6 +76,26 @@ class MainActivity : AppCompatActivity() {
 
     /** Opens the navigation drawer — called from fragment hamburger buttons. */
     fun openDrawer() = drawerLayout.openDrawer(GravityCompat.START)
+
+    /**
+     * If the app isn't already exempt from battery optimization, open the
+     * system dialog that lets the user whitelist us. This is what keeps the
+     * periodic sweep + foreground service alive on aggressive OEMs.
+     * The dialog appears at most once per install — Android remembers the
+     * user's answer.
+     */
+    @SuppressLint("BatteryLife")
+    private fun requestBatteryOptimizationExemption() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
+        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+        if (pm.isIgnoringBatteryOptimizations(packageName)) return
+        runCatching {
+            startActivity(
+                Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                    .setData(Uri.parse("package:$packageName"))
+            )
+        }
+    }
 
     private fun loadFragment(fragment: Fragment, tag: String, addToBackStack: Boolean) {
         val existing = supportFragmentManager.findFragmentByTag(tag)
